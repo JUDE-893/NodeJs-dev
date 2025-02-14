@@ -1,0 +1,30 @@
+<div class="container cards-main-container">
+    <p class='h4 text-center text-success'>Explor Stands</p>
+    <p class='h1 text-center mt-2'>Explor The Most Important Stands</p>
+    <div class="row pt-5 m-auto">
+      {% set latiestStands = data.latiestStands %}
+      
+      {% for stand in latiestStands%}
+      <div class="col-md-6 col-lg-4 pb-3 mb-4">
+
+        <!-- card-->
+        <div id="{{ stand.numero }}" class="card card-custom bg-white border-white border-0">
+          <div class="card-custom-img" style="background-image: url(https://images.pexels.com/photos/30521660/pexels-photo-30521660/free-photo-of-marche-de-rue-anime-dans-un-cadre-urbain-asiatique.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1);"></div>
+          <div class="card-custom-avatar">
+
+          </div>
+          <div class="card-body" style="overflow-y: auto">
+            <h4 class="card-title">{{ stand.title }}</h4>
+            <p class="card-text">{{ stand.description }}</p>
+          </div>
+          <div class="card-footer" style="background: inherit; border-color: inherit;">
+            <a href="#" class="btn btn-success">Participate</a>
+            <a href="#" class="btn btn-outline-success">More details</a>
+          </div>
+        </div>
+        <!-- Copy until here -->
+
+      </div>
+      {%endfor%}
+    </div>
+  </div>

@@ -1,0 +1,20 @@
+{
+  "name": "project_mysql",
+  "version": "1.0.0",
+  "description": "node.Js tutorial project that involves CRUD operations usings nodeJs and Mysql DB",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql": "^2.18.1",
+    "nodemon": "^3.1.9",
+    "nunjucks": "^3.2.4"
+  }
+}
