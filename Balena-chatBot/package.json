@@ -1,0 +1,16 @@
+{
+  "name": "balena-chatbot",
+  "version": "1.0.0",
+  "description": "AI chatBot for speech to speech",
+  "keywords": [],
+  "license": "ISC",
+  "author": "JUDE-893",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}
