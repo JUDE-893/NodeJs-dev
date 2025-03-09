@@ -1,0 +1,16 @@
+{
+  "name": "natour",
+  "version": "1.0.0",
+  "description": "NodeJs x express tutorial project",
+  "main": "app.js",
+  "scripts": {
+    "start" : "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "JUDE-893",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "nodemon": "^3.1.9"
+  }
+}

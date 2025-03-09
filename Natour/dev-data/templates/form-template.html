@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style media="screen">
+      .submit-button{
+        width:50px;
+        background-color:red
+      };
+    </style>
+  </head>
+  <body>
+
+  <button  class="submit-button" type="button" onclick="submitform()">Add Tour</button>
+
+  </body>
+  <script type="text/javascript">
+    const data = {
+        "startLocation": {
+          "description": "Utah, USA",
+          "type": "Point",
+          "coordinates": [-109.55099, 37.283469],
+          "address": "Bluff, UT 84512, USA"
+        },
+        "ratingsAverage": 4.800,
+        "ratingsQuantity": 666,
+        "images": ["tour-8-1.jpg", "tour-8-2.jpg", "tour-8-3.jpg"],
+        "startDates": [
+          "2021-03-23T10:00:00.000Z",
+          "2021-10-25T09:00:00.000Z",
+          "2022-01-30T10:00:00.000Z"
+        ]
+    };
+
+
+    function submitform() {
+
+      fetch("http://localhost:3000/api/tours/5c88fa8cf4afda39709c2955", {
+        method: 'PATCH',
+        headers : {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      })
+      .then( (response) => response.json())
+      .then( (data) => console.log(data))
+      .catch( (err) => console.log(err))
+    }
+
+
+  </script>
+</html>
