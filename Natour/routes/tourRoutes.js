@@ -6,7 +6,7 @@ const tourControllers = require('../controllers/tourControllers');
 // it is create to modelize the app routes
 const router =  express.Router();
 
-router.param('id',tourControllers.checkID)
+// router.param('id',tourControllers.checkID)
 
 // tours
 router.route('')
