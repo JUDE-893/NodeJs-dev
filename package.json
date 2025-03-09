@@ -1,0 +1,21 @@
+{
+  "name": "nodejs-dev",
+  "version": "1.0.0",
+  "description": "Ai chatBot on speech to speech ",
+  "keywords": [],
+  "homepage": "https://github.com/JUDE-893/NodeJs-dev#readme",
+  "bugs": {
+    "url": "https://github.com/JUDE-893/NodeJs-dev/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://JUDE-893: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@github.com/JUDE-893/NodeJs-dev.git"
+  },
+  "license": "ISC",
+  "author": "JUDE_893",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
