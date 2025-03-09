@@ -11,5 +11,5 @@ exports.showLatestStands = async (req,res) => {
 }
 
 exports.test = async (req,res) => {
-  templater(res,null,{},'discover-farmers-story.html')
+  templater(res,null,{},'news-letter-template.html')
 }
