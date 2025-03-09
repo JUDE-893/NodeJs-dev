@@ -7,9 +7,6 @@
   "bugs": {
     "url": "https://github.com/JUDE-893/NodeJs-dev/issues"
   },
-  "repository": {
-    "type": "git",
-  },
   "license": "ISC",
   "author": "JUDE_893",
   "type": "commonjs",
