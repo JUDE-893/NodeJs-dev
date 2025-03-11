@@ -5,16 +5,53 @@ const tourSchema = new mongoose.Schema({
   name: {
     required: [true, "the tour name is required"],
     type: String,
-    unique: [true, "a tour name must be unique"]
+    unique: [true, "a tour name must be unique"],
+    trim: true
   },
-  rating: {
-    default: 4.5,
+  duration: {
+    required: [true, "a tour duration is required"],
+    type: Number
+  },
+  maxGroupSize: {
+    required: [true, "a tour must have a group size"],
+    type: Number
+  },
+  difficulty: {
+    required: [true, "a tour must have a difficulty"],
+    type: String
+  },
+  ratingsAvg: {
+    type: Number
+  },
+  ratingsQuantity: {
     type: Number
   },
   price: {
     type: Number,
     required: [true, "the tour price is required"]
-  }
+  },
+  discount: {
+    type: Number
+  },
+  summary: {
+    required: [true, " a tour must have a description"],
+    type: String,
+    trim: true       /*"   hi there   from    ..."*/
+  },
+  description: {
+    type: String,
+    trim: true       /*"   hi there   from    ..."*/
+  },
+  imageCover: {
+    type: String,
+    required : [true, 'a toor must have a cover']
+  },
+  images: [String],
+ createdAt: {
+   type: Date,
+   default: Date.now()
+ },
+ startDate: [Date]
 });
 
 // create a collection' document model

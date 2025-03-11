@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon server.js",
+    "sample-tours": "node ./dev-data/data/sample-tour.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "JUDE-893",
