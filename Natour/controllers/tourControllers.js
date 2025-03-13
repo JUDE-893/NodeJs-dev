@@ -1,22 +1,29 @@
 const fs = require('fs');
 const Tour = require('../models/TourModel.js');
-
-// reading json files content
-// const tours = JSON.parse(fs.readFileSync(`${__dirname}/../dev-data/data/tours.json`));
-
-
+const { FluentMongoose } = require('../utils/queryBuilders')
 
 // Handlers
 exports.getTours = async (req,res) => {
   try {
-    const tours = await Tour.find();
+    console.log('rr',req.query);
+    // get total dicuments
+    let totalCount = await Tour.countDocuments();
 
+    // tours = await query;
+    const tours = await new FluentMongoose(Tour.find(), req.query)
+                          .filter()
+                          .sortBy()
+                          .fieldLimit()
+                          .paginate(totalCount)
+                          .query;
+    // success
     res.status(200).json({
       status : 'success',
       tours: tours,
     });
 
   } catch (e) {
+    // fails
     res.status(400).json({
       status : 'fails',
       message: e.message,
@@ -64,6 +71,14 @@ exports.deleteTour = async (req,res) => {
     res.status(400).json({status:'fails',message: e.message});
   }
 }
+
+exports.topToursMiddle = (req,res,next) => {
+  req.query.sortBy = "-ratingsAvg price";
+  req.query.limit = "5";
+  req.query.page = "1";
+  next();
+}
+
 
 // exports.checkID = (req,res,next,id) => {
 //   let tour = tours.find( (us) => us._id === id);

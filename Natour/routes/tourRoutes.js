@@ -14,11 +14,15 @@ router.route('')
 router.route('')
   .post(tourControllers.addTour);  //add a tour
 
+router.route('/top-5-tours')
+  .get(tourControllers.topToursMiddle, tourControllers.getTours);
+  
 router.route('/:id')
   .patch(tourControllers.updateTour);   // update a tour
 router.route('/:id') // get a tour
    .get(tourControllers.getTour);
 router.route('/:id')
   .delete(tourControllers.deleteTour);  // delete a tour
+
 
 module.exports = router;
