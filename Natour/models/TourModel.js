@@ -52,7 +52,7 @@ const tourSchema = new mongoose.Schema({
    default: Date.now(),
    select: false
  },
- startDate: [Date]
+ startDates: [Date]
 });
 
 // create a collection' document model

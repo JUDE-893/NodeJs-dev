@@ -79,6 +79,71 @@ exports.topToursMiddle = (req,res,next) => {
   next();
 }
 
+exports.tourStats = async (req, res) => {
+
+  // AGGREGATION PIPELINE
+  // a way to iterate through a collection documents in order to perform some computing operation 'avg ,sort, filterring'
+  try {
+    const stats = await Tour.aggregate([
+      {$match: {ratingsAvg : {'$gte': 4.0}}},
+      {$group: {
+        _id: {$toUpper: '$difficulty'},
+        totalCount: {$sum: 1},
+        totalRatingQuantity : {$sum: '$ratingsQuantity'},
+        ratingsAverage: {$avg : '$ratingAvg'},
+        averagePrice: {$avg : '$price'},
+        maxPrice: {$max: '$price'},
+        minPrice: {$min: '$price'},
+      }},
+      {$sort: {totalCount: -1}}
+    ])
+    res.status(200).json({status:'success',stats: stats});
+  } catch (e) {
+    res.status(400).json({status:'fails',message: e.message});
+  }
+
+}
+
+exports.monthlyStats = async (req, res) => {
+  try {
+    const year = req.params.year;
+    // unwind operator | used to destructor (or spread) a document' array property into more document ,where each field (from the array) will be included in its own respective document
+    const monthlyStats = await Tour.aggregate([
+      {
+        $unwind : '$startDates'
+      },
+      {
+        $match: {
+                  startDates: {
+                      $gte: new Date(`${year}-01-01`),
+                      $lte: new Date(`${year}-12-31`)
+                          }
+                }
+      },
+      {
+        $group: {
+          _id: {$month: '$startDates'},
+          toursTitles: {$push: '$name'},
+          tourCount: {$sum: 1}
+        },
+      },
+      {
+        $sort: {tourCount: -1}
+      },
+      {
+        $addFields: {month: '$_id'}
+      },
+      {
+        $limit: 12
+      }
+    ])
+
+    res.status(200).json({status:'success',stats: monthlyStats});
+  } catch (e) {
+    res.status(400).json({status:'fails',message: e.message});
+  }
+}
+
 
 // exports.checkID = (req,res,next,id) => {
 //   let tour = tours.find( (us) => us._id === id);

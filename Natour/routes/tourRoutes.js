@@ -16,7 +16,13 @@ router.route('')
 
 router.route('/top-5-tours')
   .get(tourControllers.topToursMiddle, tourControllers.getTours);
-  
+
+router.route('/tours-stats')
+  .get(tourControllers.tourStats);
+
+router.route('/monthly-stats/:year')
+  .get(tourControllers.monthlyStats);
+
 router.route('/:id')
   .patch(tourControllers.updateTour);   // update a tour
 router.route('/:id') // get a tour
