@@ -1,0 +1,27 @@
+{
+  "project": {
+    "title": "Project Name",
+    "description": "A brief description of the project.",
+    "features": [
+      "Feature 1",
+      "Feature 2",
+      "Feature 3"
+    ],
+    "technologies": {
+      "frontend": [
+        "Technology 1",
+        "Technology 2"
+      ],
+      "backend": [
+        "Technology 1",
+        "Technology 2"
+      ],
+      "tools": [
+        "Tool 1",
+        "Tool 2"
+      ]
+    },
+    "video": "URL to the project demo video",
+    "link": "URL to the project or repository"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "portfolio_api",
+  "version": "1.0.0",
+  "description": "nodeJs api service to deliver portfolio data to client SPA",
+  "license": "ISC",
+  "author": "JUDE-893",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

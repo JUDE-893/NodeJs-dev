@@ -1,0 +1,248 @@
+{
+  "react" : [
+    {
+    "title": "The Wild Oasis",
+    "description": "A comprehensive web application for managing a hotel resort, enabling administrators to handle bookings, rooms, guests, and staff efficiently.",
+    "features": [
+      "Booking Management",
+      "Room Management",
+      "Guest Management",
+      "Staff Management",
+      "Admin Dashboard",
+      "Authentication and Authorization"
+    ],
+    "technologies": {
+      "frontend": [
+        "React",
+        "React Router",
+        "Styled Components",
+        "Context API"
+      ],
+      "backend": [
+        "Supabase"
+      ],
+      "tools": [
+        "Vite",
+        "React Query",
+        "React Hook Form",
+        "Chart.js"
+      ]
+    },
+    "video": "https://example.com/videos/the-wild-oasis-demo.mp4",
+    "link": "https://example.com/the-wild-oasis"
+  },
+    {
+
+  "title": "CinemaParadiso",
+  "description": "A React-based web application that allows users to search for movies and TV shows using the TMDB API. It displays detailed information about movies, TV shows, seasons, episodes, and actors, and includes a custom layout for each type of content. Users can also watch trailers.",
+  "features": [
+    "Search Movies and TV Shows",
+    "Display Movie/TV Show Details",
+    "Custom Layouts for Movies, TV Shows, Seasons, and Episodes",
+    "Actor Details",
+    "Watch Trailers",
+    "Responsive Design with Bootstrap 5"
+  ],
+  "technologies": {
+    "frontend": [
+      "React",
+      "JavaScript",
+      "Axios (API Requests)",
+      "Bootstrap 5 (Styling)",
+      "React Router (Navigation)"
+    ],
+    "backend": [
+      "TMDB API (Movie and TV Data)"
+    ],
+    "tools": [
+      "VS Code (Development)",
+      "Git (Version Control)",
+      "Postman (API Testing)"
+    ]
+  },
+  "video": "https://example.com/videos/cinemaparadiso-demo.mp4",
+  "link": "https://example.com/cinemaparadiso"
+
+}
+],
+  "react & laravel" : [
+    {
+    "title": "The Worldwise",
+    "description": "A travel tracking application that allows users to log and manage their travel experiences, including visited cities, countries, and personal notes. The app uses a Laravel REST API for backend operations and authentication.",
+    "features": [
+      "Travel Log Management",
+      "City and Country Tracking",
+      "User Authentication",
+      "CRUD Operations for Travel Data",
+      "Interactive Map Integration",
+      "User Profile Management"
+    ],
+    "technologies": {
+      "frontend": [
+        "React",
+        "React Router",
+        "Styled Components",
+        "Context API"
+      ],
+      "backend": [
+        "Laravel (REST API)",
+        "PHP",
+        "MySQL",
+        "Authentication (JWT or Sanctum)"
+      ],
+      "tools": [
+        "Vite",
+        "React Query",
+        "React Hook Form",
+        "Chart.js"
+      ]
+    },
+    "video": "https://example.com/videos/the-worldwise-demo.mp4",
+    "link": "https://example.com/the-worldwise"
+
+    },
+    {
+  "title": "The Wild Oasis",
+  "description": "A comprehensive hotel management application that allows administrators to manage bookings, rooms, guests, and staff. The backend is powered by a Laravel REST API, with Sanctum for authentication and Brevo for email verification.",
+  "features": [
+    "Booking Management",
+    "Room Management",
+    "Guest Management",
+    "Staff Management",
+    "Admin Dashboard",
+    "User Authentication (Sanctum)",
+    "Email Verification (Brevo)",
+    "CRUD Operations via Laravel REST API"
+  ],
+  "technologies": {
+    "frontend": [
+      "React",
+      "React Router",
+      "Styled Components",
+      "Context API"
+    ],
+    "backend": [
+      "Laravel (REST API)",
+      "PHP",
+      "MySQL",
+      "Sanctum (Authentication)",
+      "Brevo (Email Verification)"
+    ],
+    "tools": [
+      "Vite",
+      "React Query",
+      "React Hook Form",
+      "Chart.js"
+    ]
+  },
+  "video": "https://example.com/videos/the-wild-oasis-demo.mp4",
+  "link": "https://example.com/the-wild-oasis"
+
+  }
+  ],
+  "nodejs" : [
+    {
+      "title": "Natours",
+      "description": "A RESTful API for a nature tours application, built with Node.js, Express, and MongoDB. It allows users to explore tours, book tours, and manage their bookings. The API includes advanced features like authentication, payment integration, and email notifications.",
+      "features": [
+        "Tour Management (CRUD Operations)",
+        "User Authentication and Authorization",
+        "Password Reset and Email Notifications",
+        "Payment Integration (Stripe)",
+        "Advanced Filtering, Sorting, and Pagination",
+        "Geospatial Queries (Find Tours Near You)",
+        "Error Handling and Security Best Practices",
+        "API Documentation with Postman"
+      ],
+      "technologies": {
+        "frontend": [
+          "Pug (for server-rendered views)",
+          "HTML/CSS",
+          "JavaScript"
+        ],
+        "backend": [
+          "Node.js",
+          "Express",
+          "MongoDB (with Mongoose)",
+          "JWT (JSON Web Tokens for Authentication)",
+          "Stripe (Payment Processing)",
+          "Nodemailer (Email Notifications)",
+          "Multer (File Uploads)"
+        ],
+        "tools": [
+          "Postman (API Testing)",
+          "MongoDB Compass (Database Management)",
+          "Git (Version Control)",
+          "Heroku (Deployment)"
+        ]
+      },
+      "video": "https://example.com/videos/natours-demo.mp4",
+      "link": "https://example.com/natours"
+    },
+    {
+      "title": "NodeFarm",
+      "description": "A simple Node.js application that demonstrates the basics of building a server, reading data from files, and rendering HTML templates dynamically. It simulates a farm product listing page, showcasing core Node.js concepts.",
+      "features": [
+        "Dynamic HTML Rendering",
+        "Reading Data from Files",
+        "Basic Routing",
+        "Error Handling",
+        "Simple API Endpoints"
+      ],
+      "technologies": {
+        "frontend": [
+          "HTML",
+          "CSS",
+          "JavaScript"
+        ],
+        "backend": [
+          "Node.js",
+          "Core Modules (fs, http, url)",
+          "Templating (Plain HTML with Dynamic Data)"
+        ],
+        "tools": [
+          "VS Code (Development)",
+          "Git (Version Control)",
+          "Command Line (Execution)"
+        ]
+      },
+      "video": "https://example.com/videos/nodefarm-demo.mp4",
+      "link": "https://example.com/nodefarm"
+    }
+],
+  "react native" : [
+  {
+
+    "title": "React Native Music App",
+    "description": "A mobile music application built with React Native that allows users to search for albums, tracks, and artists using the Deezer API. The app includes features like playing 30-second audio previews, listing albums and tracks, and a search form.",
+    "features": [
+      "Search Form (Albums, Tracks, Artists)",
+      "Play 30-Second Audio Previews",
+      "List Albums and Tracks",
+      "Basic Navigation",
+      "Responsive UI for Mobile Devices"
+    ],
+    "technologies": {
+      "frontend": [
+        "React Native",
+        "JavaScript",
+        "useState (Hooks)",
+        "Class-Based Components",
+        "React Navigation"
+      ],
+      "backend": [
+        "Deezer API (Music Data)",
+        "Axios (API Requests)"
+      ],
+      "tools": [
+        "Expo (Development Environment)",
+        "VS Code (Code Editor)",
+        "Git (Version Control)"
+      ]
+    },
+    "video": "https://example.com/videos/react-native-music-app-demo.mp4",
+    "link": "https://example.com/react-native-music-app"
+
+}
+]
+}
