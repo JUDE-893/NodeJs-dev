@@ -17,22 +17,22 @@ const serverUrl = process.env.LIVEKIT_URL;
 */
 
 export default async function onPublishTrackListener(at) {
-  const room  = new Room();
-  const client = await room.connect(serverUrl,at);
-
-  room.on('connected', () => {
-       console.log('Connected to the LiveKit room');
-   });
-
-   room.on('disconnected', () => {
-       console.log('Disconnected from the room');
-   });
-
-  room.on('trackSubscribed', (track,publication,participant) => {
-    console.log('track',track);
-    //filter tracks for audio only publiacation
-    if (track.kind === "audio") {
-      console.log('participant',participant,'has published an audio');
-    }
-  })
+  // const room  = new Room();
+  // const client = await room.connect(serverUrl,at);
+  //
+  // room.on('connected', () => {
+  //      console.log('Connected to the LiveKit room');
+  //  });
+  //
+  //  room.on('disconnected', () => {
+  //      console.log('Disconnected from the room');
+  //  });
+  //
+  // room.on('trackSubscribed', (track,publication,participant) => {
+  //   console.log('track',track);
+  //   //filter tracks for audio only publiacation
+  //   if (track.kind === "audio") {
+  //     console.log('participant',participant,'has published an audio');
+  //   }
+  // })
 }

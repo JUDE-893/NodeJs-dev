@@ -3,7 +3,6 @@ import {AccessToken} from 'livekit-server-sdk'
 const apiKey = process.env.LIVEKIT_API_KEY;
 const secretKey = process.env.LIVEKIT_SECRET_KEY;
 
-
 /*
 * function that returns a JWT token to provide it to the client in order to autheticate him to in asked room on the LiveKit server.
 * the JWT contain the the user's identity, the room name, and permission, beside of the LIVEKIT_API_KEY
@@ -17,14 +16,17 @@ export default async function getAccessToken(roomName,participantName) {
   const token = await new AccessToken(apiKey,secretKey,{
     identity: participantName
   });
-
+  console.log("ddd",roomName);
   // set permissions on the access token
   await token.addGrant({
     roomJoin: true,
     roomName: roomName,
     canPublish: true,
-    canSubscribe: true
-  })
+    canSubscribe: true,
+    canPublishData: true,
+    roomRecord: true,
+    canSubscribeMetrics: true,
+  });
 
   let jwt = await token.toJwt();
   return jwt;

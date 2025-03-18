@@ -4,8 +4,8 @@ import app from './index.js'
 dotenv.config();
 
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 app.listen(port, () => {
-  console.log('Balena App is Running on port:',port);
+  console.log('Balena App is Running on port............',port);
 });
