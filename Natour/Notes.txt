@@ -1,0 +1,2 @@
+#UpdateMany/One Options : {new: true, runValidators: true}
+new : returns the updated object | runValidator : trigger validation on updated fields

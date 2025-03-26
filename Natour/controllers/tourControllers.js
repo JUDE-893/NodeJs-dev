@@ -31,7 +31,7 @@ exports.getTours = errorCatcherLayer(async (req, res, next) => {
 
 exports.addTour = errorCatcherLayer(async (req, res) => {
 
-    const data = await Tour.create(req.body);
+    const data = await Tour.create(req.body,{new: true,runValidators:true});
     console.log("data",data);
     res.status(200).json({status:'success',tour:data});
 })
@@ -48,7 +48,7 @@ exports.getTour = errorCatcherLayer(async (req, res, next) => {
 })
 
 exports.updateTour = errorCatcherLayer(async (req, res, next) => {
-
+    //  new : returns the updated object | runValidators : trigger validation on updated fields
     const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {new: true,runValidators:true});
 
     if(!tour) {
