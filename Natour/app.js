@@ -1,5 +1,8 @@
 const express = require('express');
 const fs = require('fs');
+const AppErrorTrigger = require('./utils/AppErrorTrigger');
+const globalErrorCatcher = require('./controllers/globalErrorCatcher');
+
 
 // expressing our express
 const app = express();
@@ -12,7 +15,10 @@ const form = fs.readFileSync('./dev-data/templates/form-template.html');
 // setting the middleware that automatically parse & inject json ddata to the bosy of the request
 // NOTE: that it essentiel for accessing request' body data or the body would be undefined
 app.use(express.json())
-
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] Incoming Request: ${req.method} ${req.url}`);
+  next();
+});
 // setting the middleware that connect the router with the corresponding domain
 // the the request are applyed only on the router instance with the corresponding url prefix
 app.use('/api/users', usersRouter);
@@ -26,31 +32,16 @@ const root = (req,res) => {
 // Api Routes
 app.route('/').get(root);
 
-const getAllEndpoints = (app) => {
-  const endpoints = [];
-
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) { // Routes by itself
-      endpoints.push({
-        method: Object.keys(middleware.route.methods)[0].toUpperCase(),
-        path: middleware.route.path,
-      });
-    } else if (middleware.name === 'router') { // Middleware (like app.use())
-      middleware.handle.stack.forEach((handler) => {
-        if (handler.route) {
-          endpoints.push({
-            method: Object.keys(handler.route.methods)[0].toUpperCase(),
-            path: handler.route.path,
-          });
-        }
-      });
-    }
-  });
-
-  return endpoints;
-};
+// Unhandled Route middleware
+app.all('*', (req,res, next) => {
+  next(new AppErrorTrigger(`cannot find route ${req.originalUrl} on this server!`, 404));
+});
 
 // Usage
-const endpoints = getAllEndpoints(app);
+// const endpoints = getAllEndpoints(app);
+
+// GLOBAL ERROR ROUTE
+app.use(globalErrorCatcher)
+
 
 module.exports = app;

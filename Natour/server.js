@@ -6,7 +6,8 @@ const app = require('./app');
 dotenv.config({path: './.env'});
 
 // set up the host url
-const DB = process.env.DATABASE.replace('<DB_PASSWORD>',process.env.DATABASE_PASSWORD);
+// const DB = process.env.DATABASE.replace('<DB_PASSWORD>',process.env.DATABASE_PASSWORD);
+const DB = process.env.DATABASE_LOCAL;
 
 // connect
 mongoose.connect(DB, {
@@ -20,6 +21,8 @@ mongoose.connect(DB, {
 }}).then(() => {
   console.log('mongoose connected successfully');
 })
+
+// mongoose.set('debug', true);
 
 
 
@@ -36,6 +39,14 @@ mongoose.connect(DB, {
 
 //
 // event emiter on request arrival
-app.listen(process.env.PORT || 3000, () => {
+const server = app.listen(process.env.PORT || 3000, () => {
   console.log('Listening on port: ',process.env.PORT);
 })
+
+// SETTING A GLOBAL ERROR CATCHING LAYER FOR EXCEPTION THROWN OUTSIDE OF EXPRESS APP.
+process.on('unhandledRejection', err => {
+  console.log(`[UHANDLED REJECTION] FOR [${err?.name}] : ${err?.message} \n⚠️ SERVER IS SHUTTING DOWN`);
+  server.close(() => {
+    process.exit();
+  });
+});
