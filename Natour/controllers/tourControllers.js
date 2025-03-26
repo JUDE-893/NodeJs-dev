@@ -31,7 +31,7 @@ exports.getTours = errorCatcherLayer(async (req, res, next) => {
 
 exports.addTour = errorCatcherLayer(async (req, res) => {
 
-    const data = await Tour.create(req.body,{new: true,runValidators:true});
+    const data = await Tour.create(req.body);
     console.log("data",data);
     res.status(200).json({status:'success',tour:data});
 })
