@@ -143,8 +143,8 @@ userSchema.methods.correctPassword = async function(password,userPassword) {
 }
 
 // check for correct password | <password> : pasword stored in the db <usePassword> : password used by the client to authenticate | returns : true if password matches
-userSchema.methods.isOutadedToken = async function(initTime) {
-  if (this.passwordUpdatedAt) return false;
+userSchema.methods.isOutadedToken =  function(initTime) {
+  if (!this.passwordUpdatedAt) return false;
 
   let time = this.passwordUpdatedAt.getTime() / 1000;
   return time > initTime;

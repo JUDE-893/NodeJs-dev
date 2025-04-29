@@ -1,16 +1,23 @@
 import express from 'express';
 import helmet from 'helmet'
 import hpp from 'hpp';
-import AppError from './utils/AppError.js'
-import globalErrorCatcher from './controllers/globalErrorCatcher.js'
+import cors from 'cors';
+import AppError from './utils/AppError.js';
+import globalErrorCatcher from './controllers/globalErrorCatcher.js';
 //
 const app = express();
 
 // Routers
 import authRouter from './routes/authRoutes.js'
+import contactRouter from './routes/contactRoutes.js'
 
 // seting up a security hzader parameter
 app.use(helmet())
+
+// setup cors policy
+app.use(cors({
+  origin: process.env.CLIENT_SCHEME ?? 'http://localhost:3000'
+}))
 
 // prevent parameter polution
 // app.use(hpp({
@@ -22,7 +29,14 @@ app.use(express.json())
 
 
 // Router middlewares
+app.all(/^.*/, (req,res,next) => {
+  console.log(process.env.CLIENT_SCHEME);
+  console.log(`[req] ${req.method} ${req.path}........`);
+  next()
+})
+app.use('/huginn/api/contact', contactRouter)
 app.use('/huginn/api/auth', authRouter)
+
 
 app.get('/huginn/api', (req,res) => {
   res.end('Welcome to Huginn Chatting app Backend 🐦‍⬛')

@@ -8,11 +8,12 @@ function serveDev(res, error) {
 function serveProd(res, error) {
   console.log(error.operational);
   if(error.operational) {
-
+    console.log('message: ', Object.keys(error));
     return res.status(error.statusCode).json({
       status: error.status,
       message: error.message,
-      errors: error.errors
+      errors: error.errors,
+      reason: error.reason
     })
   }
   else {
@@ -36,16 +37,31 @@ function handleValidationError(error) {
   return new_e;
 }
 
+function handleJWTExpiryError() {
+
+  return {
+    status: 'fails',
+    statusCode: 401,
+    message: 'your session has expired. Please log in again',
+    operational: true,
+    reason: 'TokenExpiredError'
+  }
+}
+
 export default function globalErrorCatcher(err, req, res, next) {
   console.log(err);
   if(process.env.NODE_ENV === 'developpement') {
     serveDev(res,err);
   } else if(process.env.NODE_ENV === 'production'){
     let error = {...err};
-    console.log(error.operational);
+
+    console.log('err........: ', Object.keys(err));
 
     if(err.name === 'ValidationError') {
       error = handleValidationError(error);
+    }
+    if(err.name === 'TokenExpiredError') {
+      error = handleJWTExpiryError();
     }
     serveProd(res,error);
   }
