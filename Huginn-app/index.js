@@ -10,8 +10,10 @@ const app = express();
 // Routers
 import authRouter from './routes/authRoutes.js'
 import contactRouter from './routes/contactRoutes.js'
+import conversationRouter from './routes/conversationRoutes.js'
+import messageRouter from './routes/messageRoutes.js'
 
-// seting up a security hzader parameter
+// seting up a security header parameter
 app.use(helmet())
 
 // setup cors policy
@@ -36,6 +38,8 @@ app.all(/^.*/, (req,res,next) => {
 })
 app.use('/huginn/api/contact', contactRouter)
 app.use('/huginn/api/auth', authRouter)
+app.use('/huginn/api/conversations', conversationRouter)
+app.use('/huginn/api/conversations/:conv_id/messages', messageRouter)
 
 
 app.get('/huginn/api', (req,res) => {

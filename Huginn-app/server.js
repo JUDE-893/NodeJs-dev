@@ -19,7 +19,16 @@ mongoose.connect(DB, {
   console.log('mongoose connected successfully');
 })
 
-
 app.listen(process.env.PORT || 3000, () => {
   console.log(`Huginn app started on port..........${process.env.PORT}`);
 } )
+
+
+/*
+cd Desktop\Dev\Next.Js-dev\huginn-app-project
+npm run dev
+
+cd Desktop/Dev/NodeJs-dev/Huginn-app
+npm start
+
+*/

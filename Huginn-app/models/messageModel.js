@@ -8,7 +8,7 @@ const messageSchema = new mongoose.Schema({
     ref: 'Conversation',
     required: [true, 'a message should belong to a conversation']
   },
-  senderId: {
+  sender: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
     required: [true, 'a message should belong to a sender']
@@ -70,7 +70,10 @@ const messageSchema = new mongoose.Schema({
 
 // populate the replies
 messageSchema.pre(/^find/, function(next) {
-  this.populate({path: 'metadata.replyTo', select: '-__v senderId content createdAt'})
+  this.populate([
+    {path: 'metadata.replyTo'},
+    {path: 'sender'},
+  ])
   // .populate({path: 'tour', select: 'ratingsAvg name difficulty'});
   next()
 })

@@ -52,7 +52,6 @@ export const login = errorCatchingLayer(async (req,res,next) => {
 export const protect = errorCatchingLayer(async (req,res,next) => {
   const token = (req.headers.authorization).split(' ')[1];
   const rst = verifyJWT(token)
-  console.log(token,'*********' ,rst);
 
   // check for a valid user
   const user = await User.findById(rst.id).select('+password');

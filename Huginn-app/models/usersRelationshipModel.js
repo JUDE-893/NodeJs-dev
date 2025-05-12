@@ -7,7 +7,7 @@ const usersRelationship = new mongoose.Schema(// relationshipSchema.js
     // participants schema
     type: [
       {
-        participant: {
+
           type: mongoose.Schema.ObjectId,
           ref: 'User',
           required: true,
@@ -19,7 +19,7 @@ const usersRelationship = new mongoose.Schema(// relationshipSchema.js
             },
             message: props => `user ${props.value} does not exist`
           }
-        }
+
       }
     ],
     // validate conversation memebers
@@ -35,7 +35,7 @@ const usersRelationship = new mongoose.Schema(// relationshipSchema.js
   status: {
     type: String,
     enum: ['active', 'blocked'],
-    default: 'pending'
+    default: 'active'
   },
   type: {
     type: String,
@@ -54,8 +54,8 @@ usersRelationship.index({participantsHash :1});
 
 // create a users hash
 usersRelationship.pre('save', function(next) {
-  this.participantsHash = this.participants.map((p) => p.participant.toString())
-    .join('-');
+  this.participantsHash = this.participants.map((p) => p.toString())
+    .sort().join('-');
   next();
 })
 

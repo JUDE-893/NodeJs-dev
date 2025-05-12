@@ -6,8 +6,9 @@ const conversationSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ["direct", "group", "channel"],
-    required: true
+    default: 'direct'
   },
+  participantsHash: String,
   participants: {
     // participants schema
     type: [
@@ -85,7 +86,6 @@ conversationSchema.pre(/^find/, function(next) {
   // // .populate({path: 'tour', select: 'ratingsAvg name difficulty'});
   next()
 })
-
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 
