@@ -15,7 +15,16 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     text: {
-      type: String,
+      type: {
+        iv: {
+          type: Buffer,
+          set: (val) => Buffer.from(val, 'hex')
+        },
+        encrypted: {
+          type: Buffer,
+          set: (val) => Buffer.from(val, 'hex')
+        }
+      },
       required: [
         function() {
           return !this?.content?.media; // Text is required if media doesn't exist

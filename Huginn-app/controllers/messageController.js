@@ -9,15 +9,21 @@ import crypto from 'crypto';
 
 export const createMessage = errorCatchingLayer(async (req,res,next) => {
   const user = req.user;
+  const conversation = req.conversation;
+  const payload = req.body
+  payload.sender = user._id;
+  payload.conversationId = conversation._id;
 
-
-  return res.status(201)
+  const message = await Message.create(payload)
+  console.log(message);
+  console.log(payload);
+  return res.status(201).end()
 })
 
 export const getMessages = errorCatchingLayer(async (req,res,next) => {
 
   const user = req.user;
-  const conv_id = req.params.id;
+  const conv_id = req.conversation._id;
 
   const messages = await Message.find({conversationId: conv_id});
 
@@ -25,37 +31,6 @@ export const getMessages = errorCatchingLayer(async (req,res,next) => {
 
 })
 
-export protectConversation = errorCatchingLayer(async (req,res,next) => {
-  const user = req.user;
-  const conv_id = req.params.conv_id
-
-  const conversation = await Conversation.findById(conv_id);
-
-  if (!Boolean(conversation)) {
-    return next(new AppError('couldn\'t find conversation with the given id', 400))
-  }
-  // check if user belongs to
-  if (!conversation?.participants.some((ptp) => ptp.participant.toString() === user._id.toString())) {
-    return next( new AppError('User does not belong to this conversation',403));
-  }
-
-  req.conversation = conversation;
-  next()
-
-})
-
-export isActiveConversation = errorCatchingLayer(async (req,res,next) => {
-  const user = req.user;
-  const conversation = req.conversation;
-
-  // if blocked
-  if (!conversation?.blackList.some((id) => id.toString() === user._id.toString())) {
-    return next( new AppError('Inactive conversation. Relationship blocked',403));
-  }
-
-  next()
-
-})
 
 
 // TODO:
