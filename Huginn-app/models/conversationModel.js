@@ -1,4 +1,5 @@
-import mongoose from 'mongoose'
+import mongoose from 'mongoose';
+import {encrypt, decrypt} from '../utils/helpers.js';
 
 
 const conversationSchema = new mongoose.Schema({
@@ -57,6 +58,14 @@ const conversationSchema = new mongoose.Schema({
     }
   ]
   },
+  blackList: {
+    type: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+      }
+    ]
+  },
   metadata: {
     title: String, // Group/channel name
     avatar: String,
@@ -78,15 +87,41 @@ const conversationSchema = new mongoose.Schema({
     type: Map,
     of: Number
   }
+},{
+  toJSON: {
+    transform: function(doc, ret) {
+      ret._id = encrypt(ret._id.toString(), process.env.CONVERSATION_SECRET);
+      return ret
+    }
+  },
+  toObject: {
+    transform: function(doc, ret) {
+      ret._id = encrypt(ret._id.toString(), process.env.CONVERSATION_SECRET);
+      return ret
+    }
+  }
 })
 
-// populate the replies
-conversationSchema.pre(/^find/, function(next) {
-  // this.populate({path: 'metadata.replyTo', select: '-__v senderId content createdAt'})
-  // // .populate({path: 'tour', select: 'ratingsAvg name difficulty'});
-  next()
-})
+// // encrypte the document _id
+// conversationSchema.post(/^find/, function(docs) {
+//
+//   if (Array.isArray(docs)) {
+//     docs.forEach((doc) => doc.encryptId())
+//   } else if (docs) {
+//     docs.encryptId();
+//   }
+// })
+//
+// /* METHODS */
+// conversationSchema.methods.encryptId = function() {
+//   this.toObject();
+//   this.idzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz = encrypt(this._id.toString(), process.env.CONVERSATION_SECRET);
+//   console.log('[encryptId Method]', this);
+//   return this
+// }
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
+
+
 
 export default Conversation

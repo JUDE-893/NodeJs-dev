@@ -1,10 +1,9 @@
-import { errorCatchingLayer, signJWT } from '../utils/helpers.js';
+import { errorCatchingLayer, signJWT, decrypt } from '../utils/helpers.js';
 import AppError from '../utils/AppError.js';
 import User from '../models/userModel.js';
 import Message from '../models/messageModel.js';
 import Conversation from '../models/conversationModel.js';
 import UsersRelationship from '../models/usersRelationshipModel.js';
-import crypto from 'crypto';
 
 
 export const createConversation = errorCatchingLayer(async (req,res,next) => {
@@ -43,7 +42,6 @@ export const getConversations = errorCatchingLayer(async (req,res,next) => {
   let conversations = await Conversation.find({
   "participants.participant": user._id}).populate('participants.participant');
 
-  console.log('conversation1', conversations);
   if(conversations) {
     conversations = await Promise.all(conversations.map( async (cnv) => {
       cnv.participants = cnv.participants.filter((po) => po.participant._id.toString()  !== user._id.toString());
@@ -56,7 +54,40 @@ export const getConversations = errorCatchingLayer(async (req,res,next) => {
     conversations.sort((a,b) => { b?.lastMessage?.createdAt - a?.lastMessage?.createdAt})
   }
 
-  console.log('conversation2', conversations);
   return res.status(200).json({status: 'success', message: 'conversations fetched successfully', conversations});
+
+})
+
+export const protectConversation = errorCatchingLayer(async (req,res,next) => {
+  const user = req.user;
+  let conv_id = req.params.conv_id;
+  console.log('------------',req.params);
+  conv_id = decrypt(conv_id, process.env.CONVERSATION_SECRET);
+
+  const conversation = await Conversation.findById(conv_id);
+
+  if (!Boolean(conversation)) {
+    return next(new AppError('couldn\'t find conversation with the given id', 400))
+  }
+  // check if user belongs to
+  if (!conversation?.participants.some((ptp) => ptp.participant.toString() === user._id.toString())) {
+    return next( new AppError('User does not belong to this conversation',403));
+  }
+
+  req.conversation = conversation;
+  next()
+
+})
+
+export const isActiveConversation = errorCatchingLayer(async (req,res,next) => {
+  const user = req.user;
+  const conversation = req.conversation;
+
+  // if blocked
+  if (conversation?.blackList.some((id) => id.toString() === user._id.toString())) {
+    return next( new AppError('Inactive conversation. Relationship blocked',403));
+  }
+
+  next()
 
 })

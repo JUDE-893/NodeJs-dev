@@ -94,6 +94,10 @@ const userSchema = new mongoose.Schema({
     select:false,
     default:true
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
   passwordUpdatedAt: Date,
   passwordResetToken: String,
   PasswordResetTokenExpiresAt: Date
