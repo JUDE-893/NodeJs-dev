@@ -5,6 +5,21 @@ import Message from '../models/messageModel.js';
 import Conversation from '../models/conversationModel.js';
 import UsersRelationship from '../models/usersRelationshipModel.js';
 
+export const verifyConversation = async (user, conv_id) => {
+  conv_id = decrypt(conv_id, process.env.CONVERSATION_SECRET);
+
+  const conversation = await Conversation.findById(conv_id);
+
+  if (!Boolean(conversation)) {
+    throw new AppError('couldn\'t find conversation with the given id', 400);
+  }
+  // check if user belongs to
+  if (!conversation?.participants.some((ptp) => ptp.participant.toString() === user._id.toString())) {
+    throw  new AppError('User does not belong to this conversation',403);
+  }
+
+  return conversation
+}
 
 export const createConversation = errorCatchingLayer(async (req,res,next) => {
   const user = req.user;
@@ -62,17 +77,8 @@ export const protectConversation = errorCatchingLayer(async (req,res,next) => {
   const user = req.user;
   let conv_id = req.params.conv_id;
   console.log('------------',req.params);
-  conv_id = decrypt(conv_id, process.env.CONVERSATION_SECRET);
 
-  const conversation = await Conversation.findById(conv_id);
-
-  if (!Boolean(conversation)) {
-    return next(new AppError('couldn\'t find conversation with the given id', 400))
-  }
-  // check if user belongs to
-  if (!conversation?.participants.some((ptp) => ptp.participant.toString() === user._id.toString())) {
-    return next( new AppError('User does not belong to this conversation',403));
-  }
+  const conversation = await verifyConversation(user, conv_id)
 
   req.conversation = conversation;
   next()
