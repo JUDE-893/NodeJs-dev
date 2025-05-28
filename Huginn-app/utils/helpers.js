@@ -9,6 +9,13 @@ export function errorCatchingLayer(fnc) {
   }
 }
 
+// catches the error throw in the embeded function and
+export function wsErrorCatchingLayer(fnc) {
+  return (socket, next) => {
+    fnc(socket, next).catch(next)
+  }
+}
+
 //  create a jwt token holding the user id
 export function signJWT(id) {
   let token = jwt.sign({id},process.env.JWT_SALT, {expiresIn: process.env.JWT_EXPIRES_IN});

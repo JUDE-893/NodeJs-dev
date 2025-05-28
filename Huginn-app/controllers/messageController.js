@@ -6,17 +6,19 @@ import Conversation from '../models/conversationModel.js';
 import UsersRelationship from '../models/usersRelationshipModel.js';
 import crypto from 'crypto';
 
+export const createMessage = async (sender, conversationId, data) => {
+  console.log(sender, conversationId, data);
+  data = {...data, sender, conversationId}
+  const message = await Message.create(data);
+  return message;
+}
 
-export const createMessage = errorCatchingLayer(async (req,res,next) => {
+export const sendMessage = errorCatchingLayer(async (req,res,next) => {
   const user = req.user;
   const conversation = req.conversation;
   const payload = req.body
-  payload.sender = user._id;
-  payload.conversationId = conversation._id;
 
-  const message = await Message.create(payload)
-  console.log(message);
-  console.log(payload);
+  const message = await createMessage(user._id, conversation._id, payload )
   return res.status(201).end()
 })
 
