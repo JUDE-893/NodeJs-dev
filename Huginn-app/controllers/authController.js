@@ -8,10 +8,10 @@ import crypto from 'crypto'
 export const register = errorCatchingLayer(async (req,res,next) => {
 
   const user = await User.create({
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm,
+    name: req?.body?.name,
+    email: req?.body?.email,
+    password: req?.body?.password,
+    passwordConfirm: req?.body?.passwordConfirm,
   });
 
   // generate token
@@ -49,8 +49,8 @@ export const login = errorCatchingLayer(async (req,res,next) => {
   return res.status(200).json({status: 'success', token, user})
 })
 
-export const protect = errorCatchingLayer(async (req,res,next) => {
-  const token = (req.headers.authorization).split(' ')[1];
+export const veryfyAuthToken = async (token) => {
+  // valid jwt
   const rst = verifyJWT(token)
 
   // check for a valid user
@@ -59,15 +59,24 @@ export const protect = errorCatchingLayer(async (req,res,next) => {
   if(!user) {
     let e = new AppError('Your session is likely expired. Please log in again', 401);
     e.name = 'TokenExpiredError';
-    return e;
+    throw e;
   }
 
   // check for expired token
   if(user.isOutadedToken(rst.iat)){
     let e = new AppError('Your session is invalid due to password reset. Please log in again', 403);
     e.name = 'TokenExpiredError';
-    return e;
+    throw e;
   }
+
+  return user
+}
+
+export const protect = errorCatchingLayer(async (req,res,next) => {
+  const token = (req.headers.authorization).split(' ')[1];
+
+  const user = await veryfyAuthToken(token);
+
   // success
   req.user = user;
   next()
