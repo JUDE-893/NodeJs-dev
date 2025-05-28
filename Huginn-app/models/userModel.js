@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default:"active"
   },
+  accountStatus: {
+    type: String,
+    default:"active"
+  },
   profilePic: {
     type: String,
     default: null
