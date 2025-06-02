@@ -39,21 +39,21 @@ export default async function socketHandler(io) {
        // 1) check if authorization from cached
        let authorized = await redis.get(`${user._id.toString()}-${data.conv_id}`) // => conversation doc
        authorized = Boolean(authorized) ? JSON.parse(authorized) : null
-       console.log("authorized",authorized);
+
        // 2) check authorization from db + cache permission
        if (authorized === null) {
          authorized = await protectConversation(socket, data);
-         console.log("['redisClienet']", redis.__proto__);
          await redis.set(`${user._id.toString()}-${data.conv_id}`,
               JSON.stringify(authorized),
               {EX: +(process.env.REDIS_CONVERSATION_AUTHORIZATION_EXPIRY)}
             );
        }
-       console.log('[conv any way]',authorized);
+
        // 3) is authorized ? proceeds
         if (Boolean(authorized)) {
+          console.log('[user]', user);
           const message = await createMessage(user._id, decrypt(data.conv_id, process.env.CONVERSATION_SECRET), data);
-          await distributeEvent(socket, authorized, activeUsers, 'new-message', message)
+          await distributeEvent(socket, authorized, activeUsers, 'new-message', JSON.stringify({...message._doc, vol_id: data.vol_id,conv_id: data.conv_id, sender: {...user._doc, nameTag: user.nameTag, password: undefined, passwordUpdatedAt: undefined}}))
         }
 
     }))

@@ -23,11 +23,12 @@ export const protectConversation = async (socket, data) => {
 export const distributeEvent = async (socket, conversation, activeUsers, event , data) => {
   let ids = conversation.participants.map( p => p.participant.toString());
   let actives = await Promise.all(ids.map( userId =>  activeUsers.has(userId)));
-
+  console.log('[actives]', ids, actives);
   actives.forEach((isActive, i) => {
     console.log(ids[i],isActive);
     if (isActive) {
-      socket.to(ids[i]).emit(event, data)
+      console.log('[ids[i]]', ids[i]);
+      socket.to(ids[i]).emit(event, data);
     }
   });
 
