@@ -1,0 +1,9 @@
+*** validation error indicated all required fields are missing even after a successfull push to the db ***
+
+#Breakdown :
+.create() does not need to explicitly passing the { runValidators: true } as it embends the save() method which triggers validation automatically.
+While the .updateMany/One() does not embend the save() method which then require passing the { runValidators: true } object in orther to trigger validation.
+The problem that the validation was running twice when passing the { runValidators: true } to .create method so the second fails,
+as it is designed to validate update data, it will check for updated fields to validate
+and sincce no fields are updated (on the object created by .create), it will assum then that these fields are missings.
+As consequence a Our lovely Error showed up.
