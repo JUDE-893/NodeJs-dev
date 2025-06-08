@@ -17,7 +17,7 @@ const DB = process.env.DATABASE_LOCAL;
 
 // connect
 mongoose.connect(DB, {
-  dbName: 'natour',
+  dbName: 'mini-task-project',
   useNewUrlParser: true,
   useUnifiedTopology: true,
   writeConcern: {
