@@ -19,6 +19,13 @@ exports.register = errorCatchingLayer( async(req,res) => {
 
   const jwToken = signJwt(user._id);
 
+  res.cookie('sessionToken',jwToken, {
+    exipres: new Date(Date.now()+process.env.CSRF_EXPIRES_AFTER_DAY*24*3600*1000),
+    httpOnly: process.env.CSRF_HTTPONLY === 'true',
+    sameSite: process.env.CSRF_SAMESITE,
+    secure: process.env.NODE_ENV === 'production'
+  })
+
   return res.status(201).json({status: 'success', user: user, jwt: jwToken});
 })
 
@@ -50,33 +57,32 @@ exports.login = errorCatchingLayer(async(req,res,next) => {
 
 exports.protect = errorCatchingLayer(async(req,res,next) => {
 
-  // // retrieve the jwt
-  // if (!req.headers.authorization && req.headers.authorization?.startsWith('Bearier')) {
-  //   return next(new AppErrorTrigger('Unauthorized access! Login required', 401));
-  // }
-  // let token = req.headers.authorization.split(' ')[1];
-  //
-  // // verify the jwt
-  // const result = await verifyJwt(token);
-  //
-  //
-  // // verify the user
-  // let user = await User.findById(result.id);
-  //
-  // if (!user) {
-  //   return next(new AppErrorTrigger('The user with this token is no longer exists. Please log in again', 401));
-  // }
-  //
-  // // verify password update
-  // const outDatedToken = user.isOutDatedToken(result.iat);
-  //
-  // if (outDatedToken) return next(new AppErrorTrigger('This account password May be updated. Please login again',401))
+  // retrieve the jwt
+  console.log('req.cookies.sessionToken',req?.cookies?.sessionToken)
+  if (!req?.cookies?.sessionToken && req?.cookies?.sessionToken?.startsWith('Bearier')) {
+    return next(new AppErrorTrigger('Unauthorized access! Login required', 401));
+  }
+  // let token = req.headers?.authorization?.split(' ')[1];
+  let token = req?.cookies?.sessionToken;
 
-  const user = await User.find();
-  console.log('user::::',user);
-  user[0].role='user';
+  // verify the jwt
+  const result = await verifyJwt(token);
+
+
+  // verify the user
+  let user = await User.findById(result.id);
+
+  if (!user) {
+    return next(new AppErrorTrigger('The user with this token is no longer exists. Please log in again', 401));
+  }
+
+  // verify password update
+  const outDatedToken = user.isOutDatedToken(result.iat);
+
+  if (outDatedToken) return next(new AppErrorTrigger('This account password May be updated. Please login again',401));
+
   // ALLOWED !
-  req.user = user[0];
+  req.user = user;
   next()
 })
 

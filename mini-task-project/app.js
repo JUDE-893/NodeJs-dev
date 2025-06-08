@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const {doubleCsrf} = require('csrf-csrf');
 const helmet = require('helmet');
 const xss = require('xss-clean');
+const cors = require('cors');
 const hpp = require('hpp');
 const fs = require('fs');
 const globalErrorCatcher = require('./controllers/globalErrorCatcher');
@@ -14,10 +15,10 @@ const AppErrorTrigger = require('./utils/AppErrorTrigger');
 const app = express();
 
 
-const toursRouter = require('./routes/tourRoutes');
+const tasksRouter = require('./routes/taskRoutes');
 const usersRouter = require('./routes/userRoutes');
 const authRouter = require('./routes/authRoutes');
-const reviewRouter = require('./routes/reviewRoutes');
+// const reviewRouter = require('./routes/reviewRoutes');
 
 //setting up a security headers
 app.use(helmet())
@@ -34,6 +35,12 @@ app.use('/api',limiter);
 
 // setting the cookie parser middleware , parse the recieved cookie from the headers and injecte it into the req object
 app.use(cookieParser());
+
+// setting cors middleware to allow request from client
+app.use(cors({
+  origin: 'http://localhost:3000', // Explicit origin
+  credentials: true, // 👈 Required for withCredentials
+}));
 
 // configure & set the csrf middleware
 const {doubleCsrfProtection} = doubleCsrf({
@@ -89,9 +96,9 @@ app.get('/csrf-token', (req, res) => {
 // setting the middleware that connect the router with the corresponding domain
 // the the request are applyed only on the router instance with the corresponding url prefix
 app.use('/api/users', usersRouter);
-app.use('/api/tours',toursRouter);
+app.use('/api/tasks',tasksRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/reviews', reviewRouter);
+// app.use('/api/reviews', reviewRouter);
 
 //routes' callback functions
 const root = (req,res) => {
