@@ -15,7 +15,7 @@ exports.updateOne = function (Model, tag) {
   return errorCatchingLayer(async (req, res, next) => {
       //  new : returns the updated object | runValidators : trigger validation on updated fields
       const bcm = await Model.findByIdAndUpdate(req.params.id, req.body, {new: true,runValidators:true});
-
+      console.log(bcm, req.body);
       if(!bcm) {
         return next(new AppErrorTrigger(`Cannot ${tag} find  with that id`,404))
       }
