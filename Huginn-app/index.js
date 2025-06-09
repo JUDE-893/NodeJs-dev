@@ -32,7 +32,6 @@ app.use(express.json())
 
 // ROUTER MIDDLEWARES
 app.all(/^.*/, (req,res,next) => {
-  console.log(process.env.CLIENT_SCHEME);
   console.log(`[req] ${req.method} ${req.path}........`);
   next()
 })

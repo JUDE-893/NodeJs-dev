@@ -102,6 +102,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  verifiedAt: Date,
+  verificationToken: String,
+  verificationTokenExpiresAt: Date,
   passwordUpdatedAt: Date,
   passwordResetToken: String,
   PasswordResetTokenExpiresAt: Date
@@ -138,7 +141,6 @@ userSchema.pre('save', async function(next) {
 
    // set the password encryption time
   if(this.isNew) this.passwordUpdatedAt = new Date() - 1000;
-
   this.password = await bcrypt.hash(this.password, 12);
   this.passwordConfirm = undefined;
   return next()
@@ -168,10 +170,19 @@ userSchema.methods.isOutadedToken =  function(initTime) {
 }
 
 // create a reset token
-userSchema.methods.createPasswordResetToken = async function() {
+userSchema.methods.createPasswordResetToken = function() {
   let token = crypto.randomBytes(32).toString('hex');
   this.passwordResetToken = crypto.createHash('sha256').update(token).digest('hex')
-  this.PasswordResetTokenExpiresAt = new Date() + 10 * 60 * 1000;
+  this.PasswordResetTokenExpiresAt =  Date.now() + 10 * 60 * 1000;
+
+  return token
+}
+
+// create a verification token
+userSchema.methods.createverificationToken = function() {
+  let token = crypto.randomBytes(32).toString('hex');
+  this.verificationToken = crypto.createHash('sha256').update(token).digest('hex')
+  this.verificationTokenExpiresAt = Date.now() + 10 * 60 * 1000;
 
   return token
 }
