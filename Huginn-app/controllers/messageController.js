@@ -7,9 +7,44 @@ import UsersRelationship from '../models/usersRelationshipModel.js';
 import crypto from 'crypto';
 
 export const createMessage = async (sender, conversationId, data) => {
-  console.log(sender, conversationId, data);
+
   data = {...data, sender, conversationId}
   const message = await Message.create(data);
+  return message;
+}
+
+export const setDeletedStatus = async (deleter, conversation, data) => {
+  console.log('findById(data?.msgId):::',data, data?.msgId);
+  let message = await Message.findById(data?.msgId);
+
+  if (!message) {
+    throw new AppError('Cannot find a message with the provider identifier', 404);
+  };
+  // if the message is already deleted
+  if( message.metadata?.deleteStatus?.deleteFor === "all") {
+    return null
+  }
+  // if the user is the sender of the message
+  let isSender = message.sender._id.toString() === deleter.toString();
+
+  let deleterRole = conversation.participants.filter((p) => {
+    return p.participant.toString() === deleter.toString()
+  })[0].role;
+
+  // if the user role in the conversation is admin
+  let isAdmin = deleterRole === "admin" // fat models, skinny controllers
+  let deleteFor = (isSender || isAdmin) ? data.deleteFor : 'user'
+
+  message = await Message.findOneAndUpdate({_id: message._id},
+    {$set: {
+      updatedAt: Date.now(),
+      "metadata.deleteStatus.deleteFor": deleteFor
+    },
+    $addToSet: { "metadata.deleteStatus.deletedBy": deleter }
+  },
+  {new: true} //return the updated message
+)
+  console.log('message', JSON.stringify(message));
   return message;
 }
 
@@ -27,11 +62,16 @@ export const getMessages = errorCatchingLayer(async (req,res,next) => {
   const user = req.user;
   const conv_id = req.conversation._id;
 
-  const messages = await Message.find({conversationId: conv_id});
+  const messages = await Message.find({conversationId: conv_id}).setOptions({ readerId: user?._id });
 
   return res.status(200).json({status: 'success', message: 'conversation messages fetched successfully', messages});
 
 })
+
+
+
+
+
 
 
 

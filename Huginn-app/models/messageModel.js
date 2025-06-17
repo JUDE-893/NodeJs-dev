@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-
+// SCHEMA DEFINITION
 const messageSchema = new mongoose.Schema({
   // relational props
   conversationId: {
@@ -73,19 +73,72 @@ const messageSchema = new mongoose.Schema({
     replyTo: {
       type: mongoose.Schema.ObjectId,
       ref: 'Message'
-    } // Thread replies
+    }, // Thread replies
+    deleteStatus: {
+      deletedBy: [{
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+      }],
+      deleteFor: {
+         type: String,
+         enum: {
+          values: ['user', 'all'],
+          message: 'invalid delete for option'
+        },
+          default: 'user'
+      },
+    }
+  }
+},
+{
+  toObject: {
+    transform: function (doc, ret) {
+      if (ret?.metadata?.deleteStatus?.deleteFor === 'all') {
+        ret['content'] = null;
+      }
+    }
+  },
+  toJSON: {
+    transform: function (doc, ret) {
+      if (ret?.metadata?.deleteStatus?.deleteFor === 'all') {
+        ret['content'] = null;
+      }
+    }
   }
 })
 
-// populate the replies
+// POPULATE WITH RELATED DOC
 messageSchema.pre(/^find/, function(next) {
   this.populate([
     {path: 'metadata.replyTo'},
     {path: 'sender'},
+    {path: 'metadata.deleteStatus.deletedBy', select: '_id'}
   ])
+
   // .populate({path: 'tour', select: 'ratingsAvg name difficulty'});
   next()
-})
+});
+
+// REMOVE CONTENT OF DELETED MESSAGE BY USER
+messageSchema.pre(/^find/, function(next) {
+  this.transform((doc) => {
+    // Get readerId from query options
+    const readerId = this.getOptions()?.readerId;
+
+    console.log('some',doc, doc.metadata?.deleteStatus?.deletedBy.some(id => id?.toString() === readerId?.toString()));
+    // Check if reader has deleted this message
+    if (readerId &&
+        doc.metadata?.deleteStatus?.deletedBy?.some(id =>
+          id.toString() === readerId.toString()
+        )) {
+          console.log('[readerID]', readerId);
+      // remove content
+      doc.content = null;
+    }
+    return doc;
+  });
+  next();
+});
 
 
 const Message = mongoose.model('Message', messageSchema);

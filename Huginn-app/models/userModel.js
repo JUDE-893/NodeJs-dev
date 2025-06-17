@@ -119,7 +119,7 @@ userSchema.plugin(uniqueValidator, {message: '{PATH} must be unique'});
 
 /* VIRTUAL FIELDS */
 userSchema.virtual('nameTag').get(function(){
-  return (this.name).split(' ').map((w) => w[0]).slice(0,2).join('').toUpperCase();
+  return (this.name)?.split(' ')?.map((w) => w[0]).slice(0,2).join('').toUpperCase();
 })
 
 /* MIDDLEWARES */
