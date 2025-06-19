@@ -121,25 +121,37 @@ messageSchema.pre(/^find/, function(next) {
 
 // REMOVE CONTENT OF DELETED MESSAGE BY USER
 messageSchema.pre(/^find/, function(next) {
-  this.transform((doc) => {
-    // Get readerId from query options
-    const readerId = this.getOptions()?.readerId;
 
-    console.log('some',doc, doc.metadata?.deleteStatus?.deletedBy.some(id => id?.toString() === readerId?.toString()));
-    // Check if reader has deleted this message
-    if (readerId &&
-        doc.metadata?.deleteStatus?.deletedBy?.some(id =>
-          id.toString() === readerId.toString()
-        )) {
-          console.log('[readerID]', readerId);
-      // remove content
-      doc.content = null;
-    }
-    return doc;
+  // Get readerId from query options
+  const { readerId } = this.getOptions();
+
+  this.transform((docs) => {
+    // multiple docs retrieval
+    if (Array.isArray(docs)) {
+      docs = docs?.map((d) => d.removeContentIfDeleted(readerId) )
+      // single docs retrieval
+    } else if (docs){
+       docs = docs.removeContentIfDeleted(readerId)
+    };
+
+    return docs;
   });
   next();
 });
 
+// METHOD THAT CHECKS IF THE USER HAS DELETED A SPECIFIC DOCUMENT
+messageSchema.methods.removeContentIfDeleted = function(readerId) {
+
+  // Check if reader has deleted this message
+  let c = this.metadata?.deleteStatus?.deletedBy?.some(id =>{
+    return id?.id?.toString() === readerId?.toString()}
+  )
+  if (c) {
+    // remove content
+    this.content = null;
+  }
+  return this
+}
 
 const Message = mongoose.model('Message', messageSchema);
 

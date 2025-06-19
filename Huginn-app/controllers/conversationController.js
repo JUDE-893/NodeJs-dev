@@ -61,7 +61,7 @@ export const getConversations = errorCatchingLayer(async (req,res,next) => {
     conversations = await Promise.all(conversations.map( async (cnv) => {
       cnv.participants = cnv.participants.filter((po) => po.participant._id.toString()  !== user._id.toString());
       // last message
-      const lastMessage = await Message.findOne({conversationId: cnv._id}).sort({createdAt: -1}).exec()
+      const lastMessage = await Message.findOne({conversationId: cnv._id}).sort({createdAt: -1}).setOptions({ readerId: user?._id }).exec()
       cnv = cnv.toObject();
       cnv.lastMessage= lastMessage
       return cnv
