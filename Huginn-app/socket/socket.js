@@ -1,8 +1,8 @@
-import { io } from '../server.js';
 import { authenticate } from './auth.js';
 import { redisSet } from '../utils/cache.js';
 import { createRedisClient } from '../db/redis.js';
 import { newMessage, deleteMessage } from './controllers/messagesController.js'
+
 export default async function socketHandler(io) {
 
   // AUTHORIZE THE USER - CHECK VALID JWT

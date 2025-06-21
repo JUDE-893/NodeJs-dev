@@ -8,6 +8,7 @@
   "main": "server.js",
   "scripts": {
     "start": "nodemon server.js",
+    "stream": "nodemon socketServer.js",
     "start:prod": "cross-env NODE_ENV=production nodemon server.js",
     "test": "echo 'no testing script'"
   },
