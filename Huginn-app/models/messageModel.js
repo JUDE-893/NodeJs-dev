@@ -1,6 +1,18 @@
 import mongoose from 'mongoose'
 
-// SCHEMA DEFINITION
+// DEFINE THE MESSAGES MEDIA CONTENT DISCRIMINATORY PROPERTY
+const mediaSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    required: true,
+    enum: ['image','video','audio','call','contact']
+  }
+}, {
+  _id: false,                   // no _id on the media sub‐doc
+  discriminatorKey: 'type',     // tell Mongoose to switch on `media.type`
+})
+
+// BASE SCHEMA DEFINITION
 const messageSchema = new mongoose.Schema({
   // relational props
   conversationId: {
@@ -27,21 +39,14 @@ const messageSchema = new mongoose.Schema({
       },
       required: [
         function() {
-          return !this?.content?.media; // Text is required if media doesn't exist
+          return (!this?.content?.media); // Text is required if media doesn't exist
         },
         'Text content is required when no media is attached'
       ]
     },
     // Optional rich media
     media: {
-      url: String,
-      type: {
-         type: String,
-         enum: {
-          values: ['image','video','audio','call', 'contact'],
-          message: 'invalid media type'
-          }
-        }
+      type: mediaSchema
     }
   }, // content
   status: {
@@ -105,7 +110,36 @@ const messageSchema = new mongoose.Schema({
       }
     }
   }
-})
+});
+
+// DEFINE DISCRIMINATORY SCHEMAS FOR THE CONTENT TYPE
+const callSchema = new mongoose.Schema({
+  metadata: {
+    endedAt: Date,
+    status: {
+      type: String,
+      enum: ['non-established','responded','rejected'],
+      required: true
+    }
+  }
+}, { _id: false })
+
+const contactSchema = new mongoose.Schema({
+  contact: { type:mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+}, { _id: false })
+
+const urlSchema = new mongoose.Schema({
+  url: { type: String, required: true }
+}, { _id: false })
+
+// ATTACH DISCRIMINATORS TO SCHEMA
+messageSchema
+  .discriminator('call',    callSchema)
+  .discriminator('contact', contactSchema)
+  .discriminator('image',   urlSchema)
+  .discriminator('video',   urlSchema)
+  .discriminator('audio',   urlSchema)
+
 
 // POPULATE WITH RELATED DOC
 messageSchema.pre(/^find/, function(next) {
@@ -156,3 +190,45 @@ messageSchema.methods.removeContentIfDeleted = function(readerId) {
 const Message = mongoose.model('Message', messageSchema);
 
 export default Message
+
+
+
+
+
+
+// {
+//   media: {
+//     content: function() {
+//
+//       if (this.content.media.type === "call") {
+//         return {metadata: {
+//           endedAt: Date,
+//           status: {
+//              type: String,
+//              enum: {
+//               values: ['non-established', 'responded', 'rejected'],
+//               message: 'invalid call status'
+//               }
+//             }
+//         }}
+//       }
+//       else if (this.content.media.type === "contact") {
+//         return {contact: {
+//           type: mongoose.Schema.ObjectId,
+//           ref: 'User'
+//         }}
+//       }
+//       else {
+//         return {url: String}
+//       }
+//     },
+//
+//     type: {
+//        type: String,
+//        enum: {
+//         values: ['image','video','audio','call', 'contact'],
+//         message: 'invalid media type'
+//         }
+//       }
+//   }
+// }

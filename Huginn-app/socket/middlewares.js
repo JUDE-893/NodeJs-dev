@@ -5,7 +5,6 @@ import { wsErrorCatchingLayer } from '../utils/helpers.js';
 export const protectConversation = async (socket, data) => {
 
   // if user belongs, conversation exists..
-  console.log('[EVENT DATA]', data);
   const conversation = await verifyConversation(socket?.user, data.conv_id);
 
   const user = socket.user;
