@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+
+  redis:  # New Redis service
+    image: redis:alpine
+    # ports:
+    #   - "6380:6380"
+    restart: unless-stopped
+
+  rest:
+    build:
+      context: ..  # or ./socket-app if in separate directory
+      dockerfile: docker/rest.Dockerfile  # if using custom filename
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_LOCAL=mongodb://host.docker.internal:27017/huginn
+    extra_hosts:
+    - "host.docker.internal:host-gateway"  # ← Allows host machine access
+    volumes:
+      - ..:/app                  # Mount current directory
+      - /app/node_modules       # Keep container's node_modules separate
+    command: npm start     # Explicit command override
+
+  socket:
+    build:
+      context: ..  # or ./socket-app if in separate directory
+      dockerfile: docker/socket.Dockerfile  # if using custom filename
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_LOCAL=mongodb://host.docker.internal:27017/huginn
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # ← Allows host machine access
+    volumes:
+      - ..:/app                  # Mount current directory
+      - /app/node_modules       # Keep container's node_modules separate
+    depends_on:
+      - redis
+    command: npm run stream     # Explicit command override
+
+  nginx:
+    image: nginx:alpine
+    ports: ["80:80"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro 
+    depends_on:
+      - rest
+      - socket
