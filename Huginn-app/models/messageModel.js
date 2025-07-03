@@ -6,7 +6,8 @@ const mediaSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['image','video','audio','call','contact']
-  }
+  },
+  metadata: Object
 }, {
   _id: false,                   // no _id on the media sub‐doc
   discriminatorKey: 'type',     // tell Mongoose to switch on `media.type`
@@ -116,10 +117,16 @@ const messageSchema = new mongoose.Schema({
 const callSchema = new mongoose.Schema({
   metadata: {
     endedAt: Date,
+    startedAt: Date,
     status: {
       type: String,
       enum: ['non-established','responded','rejected'],
       required: true
+    },
+    type: {
+      type: String,
+      enum: ['audio', 'video'],
+      default: 'audio'
     }
   }
 }, { _id: false })
@@ -153,21 +160,35 @@ messageSchema.pre(/^find/, function(next) {
   next()
 });
 
+// POPULATE WITH RELATED DOC
+messageSchema.post('findOneAndUpdate', async function (doc) {
+  if (doc) {
+    await doc.populate([
+      {path: 'metadata.replyTo'},
+      {path: 'sender'},
+      {path: 'metadata.deleteStatus.deletedBy', select: '_id'}
+    ])
+  }
+  return doc
+});
+
 // REMOVE CONTENT OF DELETED MESSAGE BY USER
 messageSchema.pre(/^find/, function(next) {
 
   // Get readerId from query options
   const { readerId } = this.getOptions();
-
   this.transform((docs) => {
-    // multiple docs retrieval
-    if (Array.isArray(docs)) {
-      docs = docs?.map((d) => d.removeContentIfDeleted(readerId) )
-      // single docs retrieval
-    } else if (docs){
-       docs = docs.removeContentIfDeleted(readerId)
-    };
-
+    if (docs instanceof mongoose.Document) {
+        // multiple docs retrieval
+      if (Array.isArray(docs)) {
+        docs = docs?.map((d) => d.removeContentIfDeleted(readerId) )
+        // single docs retrieval
+      } else if (docs){
+         docs = docs?.removeContentIfDeleted(readerId);
+      };
+    } else if (docs?.metadata?.deleteStatus?.deletedBy?.includes(readerId)) {
+      docs = {...docs,content: null};
+    }
     return docs;
   });
   next();
