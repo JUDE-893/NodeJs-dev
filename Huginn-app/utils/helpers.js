@@ -12,7 +12,10 @@ export function errorCatchingLayer(fnc) {
 // catches the error throw in the embeded function and
 export function wsErrorCatchingLayer(fnc) {
   return (socket, next) => {
-    fnc(socket, next).catch(next)
+    fnc(socket, next).catch((e) => {
+      console.log('dddddddddddddddrrrrrrrrrrr',e);
+      return next(e)
+    })
   }
 }
 
@@ -54,4 +57,33 @@ export function decrypt(text, secret) {
   let decryptedCipher = decipher.update(text, 'hex', 'utf-8'); // decrypt
   decryptedCipher += decipher.final('utf-8'); // generate the final hex part
   return decryptedCipher
+}
+
+// function that return a derived new Object from given object and array of desired keys
+const fromObject = (obj, keys) =>
+  Object.fromEntries(keys.map(key => [key, obj[key]]));
+
+// global unhandled error é rejections handler 
+export const cdebugger = () => {
+  // Handle ALL error types
+  const handleError = (err, origin) => {
+    console.log(`💥 CRITICAL ${origin}:`, err);
+    console.error(`💥 CRITICAL ${origin}:`, err);
+
+    // Optional: Send to error tracking (Sentry, etc.)
+    // require('@sentry/node').captureException(err);
+
+    process.exit(1); // Exit with failure code
+  };
+
+  // Catch all possible error types
+  process.on('uncaughtException', (err) => handleError(err, 'uncaughtException'));
+  process.on('unhandledRejection', (err) => handleError(err, 'unhandledRejection'));
+  process.on('SIGTERM', () => handleError(new Error('SIGTERM'), 'SIGTERM'));
+  process.on('SIGINT', () => handleError(new Error('SIGINT'), 'SIGINT'));
+
+  // Optional: Operational errors (non-crashing)
+  process.on('warning', (warning) => {
+    console.warn('⚠️ Warning:', warning);
+  });
 }

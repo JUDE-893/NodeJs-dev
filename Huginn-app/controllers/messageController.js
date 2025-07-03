@@ -14,7 +14,6 @@ export const createMessage = async (sender, conversationId, data) => {
 }
 
 export const setDeletedStatus = async (deleter, conversation, data) => {
-  console.log('findById(data?.msgId):::',data, data?.msgId);
   let message = await Message.findById(data?.msgId);
 
   if (!message) {
@@ -44,8 +43,15 @@ export const setDeletedStatus = async (deleter, conversation, data) => {
   },
   {new: true} //return the updated message
 )
-  console.log('message', JSON.stringify(message));
+
   return message;
+}
+
+export const updateMessage = async (msgId, data) => {
+
+  const updatedMessage = await Message.findOneAndUpdate( { _id: msgId }, { $set: { ...data } }, { new: true,useFindAndModify: false } );
+
+  return updatedMessage;
 }
 
 export const sendMessage = errorCatchingLayer(async (req,res,next) => {
@@ -67,7 +73,6 @@ export const getMessages = errorCatchingLayer(async (req,res,next) => {
   return res.status(200).json({status: 'success', message: 'conversation messages fetched successfully', messages});
 
 })
-
 
 
 

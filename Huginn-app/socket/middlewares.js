@@ -1,6 +1,8 @@
 import { verifyConversation } from '../controllers/conversationController.js'
 import { createMessage } from '../controllers/messageController.js'
 import { wsErrorCatchingLayer } from '../utils/helpers.js';
+import { AccessToken } from 'livekit-server-sdk';
+
 
 export const protectConversation = async (socket, data) => {
 
@@ -37,17 +39,60 @@ export const isAuthorized = async (socket, redis, user, data) => {
    return authorized
 }
 
+// get a converssation active users
+export const getConversationActives = async (conversation, activeUsers) => {
+  const ids = conversation.participants.map(p => p.participant.toString());
+  const actives = await Promise.all(
+    ids.map(async id => (await activeUsers.has(id)) ? id : null)
+  );
+  return actives.filter(Boolean);
+};
+
+
 // function that checks conversation active users and distribute  messages to it
-export const distributeEvent = async (socket, conversation, activeUsers, event , data) => {
-  let ids = conversation.participants.map( p => p.participant.toString());
-  let actives = await Promise.all(ids.map( userId =>  activeUsers.has(userId)));
-  console.log('[actives]', ids, actives);
-  actives.forEach((isActive, i) => {
-    console.log(ids[i],isActive);
-    if (isActive) {
-      console.log('[ids[i]]', ids[i]);
-      socket.to(ids[i]).emit(event, data);
-    }
+export const distributeEvent = async (socket, actives, event , data, callback=(d) => d) => {
+
+  console.log('[actives]', actives);
+  actives.forEach(async (u) => {
+      console.log(u, 'is active');
+      data = await callback(data, u)
+      socket.to(u).emit(event, JSON.stringify(data));
   });
 
 }
+
+// function that generate livekit's room access token
+export const generateRAT = async (room, user) => {
+
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const secretKey = process.env.LIVEKIT_SECRET_KEY;
+
+    // initiat an access token object
+    const token = new AccessToken(apiKey,secretKey,{
+      identity: user,
+      name: user,
+      room,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+      roomRecord: true
+    });
+
+    // set permissions on the access token
+    await token.addGrant({
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+      roomRecord: true,
+      room,
+      canSubscribeMetrics: true,
+    });
+
+    let jwti = await token.toJwt();
+
+    return jwti;
+}
+
+//

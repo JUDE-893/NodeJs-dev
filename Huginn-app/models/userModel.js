@@ -110,8 +110,18 @@ const userSchema = new mongoose.Schema({
   PasswordResetTokenExpiresAt: Date
 },
 {
-  toJSON: {virtuals: true},
-  toObject: {virtuals: true},
+  toJSON: {virtuals: true,
+    transform: function (doc, ret) {
+        ret['password'] = null;
+        ret['passwordConfirm'] = null;
+      }
+  },
+  toObject: {virtuals: true,
+    transform: function (doc, ret) {
+        ret['password'] = null;
+        ret['passwordConfirm'] = null;
+      }
+  },
 })
 
 // validate the fields with unique constraint

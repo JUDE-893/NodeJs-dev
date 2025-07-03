@@ -4,9 +4,12 @@ import dotenv from 'dotenv'
 import app from './socketApp.js';
 import socketHandler from './socket/socket.js';
 import { connectDB } from './db/mongoose.js';
-
+import {cdebugger} from './utils/helpers.js'
 // LOAD ENVIRONEMET VARIABLES
 dotenv.config();
+
+// cdebugger()
+
 
 // CONNECT TO DB
 connectDB();
@@ -26,6 +29,7 @@ export const io = new Server(server, {
 
 // SET WS EVENTS HANDLERS
 socketHandler(io).then()
+
 
 // START SERVER
 server.listen(process.env.WS_PORT || 5001, () => {
