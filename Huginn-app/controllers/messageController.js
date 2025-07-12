@@ -67,8 +67,19 @@ export const getMessages = errorCatchingLayer(async (req,res,next) => {
 
   const user = req.user;
   const conv_id = req.conversation._id;
+  const { page } = req.query;
+  let limite = +(process.env.MESSAGES_PAGE_LENGTH);
+  let skipp = +(process.env.MESSAGES_PAGE_LENGTH) * ((+page)-1);
 
-  const messages = await Message.find({conversationId: conv_id}).setOptions({ readerId: user?._id });
+  console.log("___",skipp, limite);
+
+  let messages = await Message.find({ conversationId: conv_id })
+  .setOptions({ readerId: user?._id })
+  .sort({ createdAt: -1 })
+  .limit(limite)
+  .skip(skipp);
+
+  messages = messages?.reverse();
 
   return res.status(200).json({status: 'success', message: 'conversation messages fetched successfully', messages});
 
