@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import AppError from './utils/AppError.js'
 import globalErrorCatcher from './controllers/globalErrorCatcher.js'
-import urlRouter from './routes/urlRetrieval_routes.js'
+import locationUrlRouter from './routes/urlRetrievalRoutes.js'
+import siteMailsRouter from './routes/locationMailsRetrievalRoutes.js'
 
 const app = express();
 app.use(helmet());
@@ -15,7 +16,8 @@ app.get('/health', (req, res) => {
 });
 
 // app routes
-app.use('/MLC/api/location', urlRouter)
+app.use('/MLC/api/location', locationUrlRouter)
+app.use('/MLC/api/site', siteMailsRouter)
 
 // UNHANDLED ROUTES
 app.all(/.*/, (req,res, next) => {
