@@ -78,7 +78,26 @@ export const createStealthContext = async (browser) => {
     'Referer': referers[Math.floor(Math.random() * referers.length)],
     'Accept-Language': 'en-US,en;q=0.9'
   });
-  
+
+  // Bypass consent flow by setting cookies directly
+  await page.context().addCookies([
+    {
+      name: 'CONSENT',
+      value: 'YES+',
+      domain: '.google.com',
+      path: '/',
+      secure: true,
+      sameSite: 'None'
+    },
+    {
+      name: 'CONSENT',
+      value: 'YES+',
+      domain: '.google.fr',
+      path: '/',
+      secure: true,
+      sameSite: 'None'
+    }
+  ]);
   return { context, page };
 };
 

@@ -28,7 +28,7 @@ function serveProd(res, error) {
 
 export default function globalErrorCatcher(err, req, res, next) {
   console.log(err);
-  if(process.env.NODE_ENV === 'developpement') {
+  if(process.env.NODE_ENV === 'development') {
     serveDev(res,err);
   } else if(process.env.NODE_ENV === 'production'){
     let error = {...err};

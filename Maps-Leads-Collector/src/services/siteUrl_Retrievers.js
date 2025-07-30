@@ -1,9 +1,13 @@
-import { humandelay_emmitter } from '../utils/humandelay_emmitter'
 
 // SCROLL TO THE VERY BOTTOM TO LOAD ALL LOCATIONS
-async function scrollTest(page) {
+export async function scrollTest(page) {
   // Scroll to load all results
-  const containerSelector = 'div[role="feed"]';
+  const containerSelector = 'div[role="feed"]'; // Wait for the feed to load with longer timeout
+  await page.waitForSelector(containerSelector, {
+    state: 'visible',
+    timeout: 100000  // 30 seconds timeout
+  });
+
   let previousHeight = 0;
   let currentHeight = await page.$eval(containerSelector, el => el.scrollHeight);
   let scrollAttempts = 0;
@@ -16,7 +20,7 @@ async function scrollTest(page) {
     });
 
     // Wait for new content to load
-    await page.waitForTimeout(2000 + Math.random() * 1000); // Randomized delay
+    await page.waitForTimeout(2000 + Math.random() * 3000); // Randomized delay
 
     // Update height measurements
     previousHeight = currentHeight;
@@ -28,10 +32,30 @@ async function scrollTest(page) {
 };
 
 // GO THE GOOGLE MAP AND SEARCH A LOCATION KEYWORD
-async function searchTest(page) {
+export async function searchTest(page, searchKeyword) {
+
+  // Bypass consent flow by setting cookies directly
+  await page.context().addCookies([
+  {
+    name: 'CONSENT',
+    value: 'YES+',
+    domain: '.google.com',
+    path: '/',
+    secure: true,
+    sameSite: 'None'
+  },
+  {
+    name: 'CONSENT',
+    value: 'YES+',
+    domain: '.google.fr',
+    path: '/',
+    secure: true,
+    sameSite: 'None'
+  }
+]);
 
   // brows
-  await page.goto('https://consent.google.com/m?continue=https://www.google.com/maps/&gl=NL&m=0&pc=m&uxe=eomtm&cm=2&hl=fr&src=1');
+  await page.goto('https://www.google.com/maps/',{ timeout: 0 });
 
   const currentUrl = page.url();
   // check for potentiel permission page redirect
@@ -49,7 +73,7 @@ async function searchTest(page) {
   await await page.locator('#searchboxinput').click();
   await await page.locator('#searchboxinput').fill('');
   await await page.locator('#searchboxinput').press('CapsLock');
-  await await page.locator('#searchboxinput').fill('hospital in berlin');
+  await await page.locator('#searchboxinput').fill(searchKeyword ?? "");
   await page.locator('#searchboxinput').click();
   await await page.locator('#searchbox-searchbutton').click();
 
@@ -64,7 +88,7 @@ async function searchTest(page) {
 }
 
 // COLLECT SITE URL FROM DIFFERENT LOCATION DISPLAYED ON PAGE
-async function collectTest(page) {
+export async function collectTest(page) {
 
   // Wait for website links to appear using multi-language selector
   try {
@@ -99,6 +123,6 @@ async function collectTest(page) {
       .map(a => a.href);
   });
   console.log("hrefs",[...new Set(hrefs)]);
-
+  return [...new Set(hrefs)]
   // await browser.close();
 }

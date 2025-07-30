@@ -1,0 +1,18 @@
+# Use official Node.js image
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies first (caching optimization)
+COPY package*.json ./
+RUN npm install --production
+
+# Copy application source
+COPY src ./src
+
+# Expose API port
+EXPOSE 5000
+
+# Start the application
+CMD ["npm", "start"]
