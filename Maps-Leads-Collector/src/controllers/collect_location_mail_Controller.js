@@ -13,7 +13,7 @@ export const scrapMainPage = errorCatchingLayer(async (req, res, next) => {
   let page;
   let browser = await createBrowserInstance();
   const { site } = req.body;
-
+  console.log("°req.body°", req.body);
 
   try {
     // require teh search keyword
@@ -27,7 +27,7 @@ export const scrapMainPage = errorCatchingLayer(async (req, res, next) => {
     page = stealth.page;
 
     // NAVIGATE IN TO THE GIVEN URL AND RETRIEVE EMAILS FROM IT
-    result = await shallowEmailCrawl(page, site)
+    result = await shallowEmailCrawl(browser, page, site)
     await humandelay_emmitter(page);
 
     return res.status(200).json({status: "success", url: site, emails: result });
