@@ -19,31 +19,36 @@ import { extractEmails } from './extractPageMails.js'
    * 3. Visits each linked page (max 50) without following additional links
    * 4. Returns consolidated unique emails from all crawled pages
    **/
-export async function shallowEmailCrawl(page, url) {
-  await page.goto(url);
+export async function shallowEmailCrawl(browser, page, url) {
+  await page.goto(url,{ timeout: 0 });
 
   // 1. Main page extraction
   const emails = await extractEmails(page);
+  console.log("emails", emails);
 
   // 2. Get all same-domain links
-  const links = await page.$$eval('a', anchors => [...new Set(
-    anchors.map(a => a.href)
-      .filter(href => href.startsWith('http'))
-      .map(href => new URL(href))
-      .filter(url => url.hostname === new URL(page.url()).hostname)
-      .map(url => url.href)
-  )]);
+  const currentHost = new URL(await page.url()).hostname;
+  const links = await page.$$eval('a', (anchors, host) => {
+    return anchors.map(a => a.href)
+      .filter(href => {
+        try {
+          const url = new URL(href);
+          return url.hostname === host;
+        } catch {
+          return false;
+        }
+      });
+  }, currentHost);
 
   // 3. Crawl links without recursion
   console.log("links : ", links);
   for (const link of links.slice(0, 50)) { // Safety limit
     const newPage = await browser.newPage();
-    await newPage.goto(link, { waitUntil: 'domcontentloaded' });
+    await newPage.goto(link, { timeout: 0 });
     emails.push(...await extractEmails(newPage));
     await newPage.close();
   }
 
-  await browser.close();
   return [...new Set(emails.filter(e => e))];
 }
 
