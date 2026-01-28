@@ -1,5 +1,5 @@
 import express from 'express';
-import {register, login, forgotPassword, resetPassword, activateAccount}  from '../controllers/authController.js';
+import {register, login, forgotPassword, resetPassword, activateAccount, reSendVerificationToken, getUserFromToken}  from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -18,6 +18,14 @@ router.route('/resetPassword/:resetToken')
 router.route('/verify-Account/:token')
       .get(activateAccount);
 
+router.route('/resend-verification-mail')
+      .get(async (req, res, next) => {
+            const token = (req.headers.authorization).split(' ')[1];
+            const user = await getUserFromToken(token);
+            req.user = user;
+            next();
+
+      }, reSendVerificationToken);
 
 
 export default router
