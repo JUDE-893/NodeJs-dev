@@ -1,0 +1,141 @@
+@startuml E2EE_Component_Diagram
+
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title E2EE Messaging Architecture - Component Diagram
+
+package "Client Application" {
+    component "Web Browser" as Browser {
+        [User Interface] as UI
+        [React Query Cache] as Cache
+        [localStorage] as LocalStorage
+        [Memory Store] as Memory
+    }
+    
+    component "Crypto Layer" as Crypto {
+        [Identity Secret Manager] as IdentityMgr
+        [Group Key Manager] as GroupKeyMgr
+        [Token Manager] as TokenMgr
+        [Message Encryptor] as MsgEncrypt
+        [Asymmetric Key Handler] as AsymKey
+    }
+    
+    component "Device Storage" as DeviceStorage {
+        database "Encrypted Data" as EncryptedDB {
+            [Identity Secret]
+            [Encrypted Member Keys]
+            [Encrypted Token Versions]
+            [Temp Private Keys]
+        }
+    }
+}
+
+package "Server Infrastructure" {
+    component "REST API Server" as API {
+        [Authentication Service] as Auth
+        [Conversation Service] as ConvService
+        [Message Service] as MsgService
+        [Member Service] as MemberService
+        [Notification Service] as NotifyService
+        [Authorization Service] as AuthzService
+    }
+    
+    database "Application Database" as AppDB {
+        [Users]
+        [Conversations]
+        [Members]
+        [Messages]
+        [Rotation Queue]
+    }
+}
+
+package "HashiCorp Vault" as Vault {
+    component "KV Secrets Engine" as KV {
+        database "Token Versions Store" as TokenStore
+    }
+    
+    component "Server Secrets" as VaultSecrets {
+        [DB Credentials]
+        [API Keys]
+    }
+}
+
+package "External Services" {
+    [Email Service] as Email
+    [Push Notification Service] as Push
+}
+
+' Client Internal Connections
+UI --> Cache : "query/mutate"
+UI --> Crypto : "encrypt/decrypt"
+Cache --> Memory : "temp storage"
+Crypto --> IdentityMgr
+Crypto --> GroupKeyMgr
+Crypto --> TokenMgr
+Crypto --> MsgEncrypt
+Crypto --> AsymKey
+IdentityMgr --> DeviceStorage : "read/write"
+GroupKeyMgr --> Memory : "store in RAM only"
+TokenMgr --> LocalStorage : "encrypted tokens"
+AsymKey --> DeviceStorage : "temp key pairs"
+
+' Client to Server
+UI --> API : "HTTPS/TLS"
+NotifyService --> UI : "WebSocket"
+
+' Server Internal
+API --> Auth
+API --> ConvService
+API --> MsgService
+API --> MemberService
+API --> NotifyService
+Auth --> AuthzService
+ConvService --> AppDB
+MsgService --> AppDB
+MemberService --> AppDB
+AuthzService --> AppDB
+
+' Server to Vault
+ConvService --> KV : "store/retrieve\nencrypted tokens"
+MsgService --> KV : "retrieve\nencrypted tokens"
+API --> VaultSecrets : "get credentials"
+
+' Server to External
+Auth --> Email : "verification emails"
+NotifyService --> Push : "notifications"
+
+note right of Crypto
+  All cryptographic operations
+  happen CLIENT-SIDE only.
+  Server never sees plaintext
+  keys or messages.
+end note
+
+note right of KV
+  Vault stores CLIENT-ENCRYPTED
+  token versions. Server cannot
+  decrypt them.
+end note
+
+note bottom of AppDB
+  Stores:
+  - User metadata
+  - Conversation metadata
+  - Encrypted member keys
+  - Encrypted messages
+  - NEVER stores plaintext keys
+end note
+
+note left of Memory
+  Decrypted data exists
+  ONLY in memory:
+  - Group keys
+  - Tokens
+  - Message plaintext
+  Cleared on logout/close
+end note
+
+@enduml

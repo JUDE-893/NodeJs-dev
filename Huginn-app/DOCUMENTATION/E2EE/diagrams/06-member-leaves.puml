@@ -1,0 +1,169 @@
+@startuml 06_Member_Leaves
+
+title 06. When Member Leaves (Scheduled Token Creation)
+
+actor "Leaving Member" as Leaver
+participant "Leaver Client" as LeaverClient
+participant "Server API" as Server
+participant "Database" as DB
+participant "Cron Job" as Cron
+participant "WebSocket" as WS
+participant "Member Client\n(First Responder)" as MemberClient
+participant "Crypto Layer" as Crypto
+participant "localStorage" as Storage
+participant "Vault KV" as Vault
+
+Leaver -> Server: POST /conversations/{conv_id}/leave
+activate Server
+
+Server -> DB: Remove member\nUPDATE members\nSET leave_date = NOW()
+activate DB
+DB --> Server: Member removed
+deactivate DB
+
+Server -> DB: Queue token rotation\nINSERT INTO rotation_queue\n{conv_id, scheduled_at: NOW() + 5min}
+activate DB
+DB --> Server: Queued
+deactivate DB
+
+Server --> LeaverClient: "Left successfully"
+deactivate Server
+
+LeaverClient -> LeaverClient: Clear local data:\n- member_key\n- All token versions\n- Group key from memory
+note right of LeaverClient
+  Leaver can no longer decrypt
+  future messages
+end note
+
+... Wait for scheduled time (e.g., 5 minutes) ...
+
+Cron -> DB: Check rotation_queue\nWHERE scheduled_at <= NOW()
+activate DB
+DB --> Cron: [{conv_id, scheduled_at}, ...]
+deactivate DB
+
+loop For each pending rotation
+
+    Cron -> DB: Get online members\nfor conversation
+    activate DB
+    DB --> Cron: List of online member IDs
+    deactivate DB
+    
+    alt Members online
+        Cron -> WS: Broadcast to all online members\n{conv_id, action: "create_token"}
+        activate WS
+        
+        WS -> MemberClient: Token creation notification
+        WS -> WS: ... (other members also notified)
+        
+        deactivate WS
+        
+        note over WS, MemberClient
+          Multiple members receive notification
+          Race condition possible
+          First to respond wins
+        end note
+        
+    else No members online
+        Cron -> DB: Keep in queue\nReschedule for later
+        activate DB
+        DB --> Cron: Rescheduled
+        deactivate DB
+    end
+    
+end
+
+activate MemberClient
+
+MemberClient -> Crypto: Generate new token
+activate Crypto
+Crypto --> MemberClient: token (plaintext)
+deactivate Crypto
+
+MemberClient -> Storage: Get group_key\n(from cached member_key)
+activate Storage
+Storage --> MemberClient: group_key
+deactivate Storage
+
+MemberClient -> Crypto: Encrypt token
+activate Crypto
+note right of Crypto
+  encrypted_token = Encrypt(
+    token,
+    group_key
+  )
+end note
+Crypto --> MemberClient: encrypted_token
+deactivate Crypto
+
+MemberClient -> Server: POST /conversations/{conv_id}/submit-token\n{encrypted_token}
+activate Server
+
+Server -> DB: Check rotation_queue\nWHERE conv_id = {conv_id}\nAND status = 'pending'
+activate DB
+
+alt Rotation still pending
+    DB --> Server: Rotation pending (first response)
+    deactivate DB
+    
+    Server -> Server: Derive new version name\nfrom latest_token_version\n("v_1.3.4" -> "v_1.3.5")
+    
+    Server -> Vault: PUT /conversations/{conv_id}/versions/{new_version}\n{encrypted_token, create_date}
+    activate Vault
+    
+    alt Version doesn't exist
+        Vault -> Vault: Store new version
+        Vault --> Server: 201 Created
+        
+        Server -> DB: UPDATE conversation\nSET latest_token_version = {new_version}
+        activate DB
+        DB --> Server: Updated
+        deactivate DB
+        
+        Server -> DB: DELETE FROM rotation_queue\nWHERE conv_id = {conv_id}
+        activate DB
+        DB --> Server: Deleted
+        deactivate DB
+        
+        Server --> MemberClient: 201 Created\n"Token version created"
+        
+    else Version already exists (race condition)
+        note right of Vault
+          Another member already created
+          this version - reject to prevent
+          malicious token alteration
+        end note
+        Vault --> Server: 409 Conflict\n"Version exists"
+        deactivate Vault
+        
+        Server --> MemberClient: 409 Conflict\n"Another member already created"
+    end
+    
+else Rotation already completed
+    DB --> Server: No pending rotation
+    deactivate DB
+    Server --> MemberClient: 409 Conflict\n"Already completed"
+end
+
+deactivate Server
+
+MemberClient -> MemberClient: Invalidate local cache
+note right of MemberClient
+  Don't store locally to avoid
+  confusion about which version
+  was accepted
+end note
+
+MemberClient --> MemberClient: Re-fetch conversation data\nto get accepted version
+deactivate MemberClient
+
+note over Leaver, Vault
+  Result:
+  ✅ Member removed
+  ✅ New token version created (new epoch)
+  ✅ Leaver cannot decrypt future messages
+  ✅ Race condition handled by Vault uniqueness
+  ⏱️ Batched rotation (efficiency)
+end note
+
+@enduml

@@ -1,0 +1,229 @@
+@startuml Data_Model
+
+!define TABLE(x) class x << (T,#FFAAAA) >>
+!define PRIMARY_KEY(x) <u>x</u>
+!define FOREIGN_KEY(x) <i>x</i>
+
+title E2EE Messaging - Data Model
+
+' Database Entities
+TABLE(users) {
+  PRIMARY_KEY(user_id): UUID
+  --
+  email: VARCHAR(255)
+  password_hash: VARCHAR(255)
+  created_at: TIMESTAMP
+  last_login: TIMESTAMP
+  --
+  Note: identity_secret stored
+  CLIENT-SIDE only, never in DB
+}
+
+TABLE(conversations) {
+  PRIMARY_KEY(conversation_id): UUID
+  --
+  name: VARCHAR(255)
+  created_at: TIMESTAMP
+  created_by: UUID
+  latest_token_version: VARCHAR(50)
+  latest_group_key_version: VARCHAR(50)
+  --
+  Note: group_key NEVER stored,
+  only exists in memory
+}
+
+TABLE(conversation_members) {
+  PRIMARY_KEY(member_id): UUID
+  --
+  FOREIGN_KEY(conversation_id): UUID
+  FOREIGN_KEY(user_id): UUID
+  member_key: TEXT
+  join_date: TIMESTAMP
+  leave_date: TIMESTAMP (nullable)
+  is_admin: BOOLEAN
+  is_banned: BOOLEAN
+  --
+  Note: member_key is encrypted
+  group_key using identity_secret
+  Server CANNOT decrypt
+}
+
+TABLE(messages) {
+  PRIMARY_KEY(message_id): UUID
+  --
+  FOREIGN_KEY(conversation_id): UUID
+  FOREIGN_KEY(sender_id): UUID
+  encrypted_content: BYTEA
+  token_version: VARCHAR(50)
+  nonce: BYTEA
+  timestamp: TIMESTAMP
+  --
+  Note: Server CANNOT decrypt
+  encrypted_content (needs token)
+}
+
+TABLE(rotation_queue) {
+  PRIMARY_KEY(queue_id): UUID
+  --
+  FOREIGN_KEY(conversation_id): UUID
+  scheduled_at: TIMESTAMP
+  reason: VARCHAR(50)
+  status: ENUM(pending, completed, failed)
+  created_at: TIMESTAMP
+  --
+  Note: Queue for batched
+  token rotations after member leaves
+}
+
+' Vault Entities (KV Store)
+TABLE(vault_token_versions) {
+  Key: conversations/{conv_id}/versions/{version}
+  --
+  Value: {
+    encrypted_token: TEXT
+    create_date: TIMESTAMP
+    created_by: UUID
+    group_key_version: VARCHAR(50)
+  }
+  --
+  Note: encrypted_token is encrypted
+  with group_key CLIENT-SIDE
+  Vault CANNOT decrypt
+}
+
+TABLE(vault_user_backups) {
+  Key: users/{user_id}/identity-backup
+  --
+  Value: {
+    encrypted_identity_secret: TEXT
+    encryption_method: VARCHAR(50)
+    created_at: TIMESTAMP
+  }
+  --
+  Note: OPTIONAL backup
+  Encrypted with password
+  Vault CANNOT decrypt
+}
+
+' Device Storage (Client-Side)
+TABLE(device_storage) {
+  identity_secret: BYTES(32)
+  --
+  temp_key_pairs: [{
+    publicKey: BYTES
+    privateKey: BYTES
+    group_key_version: VARCHAR
+    created_at: TIMESTAMP
+  }]
+  --
+  Note: CLIENT-SIDE ONLY
+  NEVER transmitted to server
+}
+
+TABLE(browser_localstorage) {
+  encrypted_member_keys: {
+    conv_id → encrypted_member_key
+  }
+  encrypted_token_versions: {
+    token_version → encrypted_token
+  }
+  --
+  Note: All values encrypted
+  Cannot be used without
+  identity_secret
+}
+
+TABLE(memory_cache) {
+  decrypted_tokens: {
+    token_version → token (plaintext)
+  }
+  decrypted_messages: {
+    message_id → plaintext
+  }
+  group_keys: {
+    conv_id → group_key (plaintext)
+  }
+  --
+  Note: Exists ONLY in RAM
+  Cleared on logout/close
+  MOST SENSITIVE DATA
+}
+
+' Relationships
+users "1" -- "0..*" conversation_members : is member
+conversations "1" -- "0..*" conversation_members : has members
+conversations "1" -- "0..*" messages : contains
+users "1" -- "0..*" messages : sends
+conversations "1" -- "0..*" rotation_queue : has queued rotations
+conversations "1" -- "0..*" vault_token_versions : has token versions
+
+' Notes on encryption layers
+note right of conversation_members
+  Encryption Chain:
+  
+  identity_secret (device)
+    ↓ decrypt
+  member_key (DB)
+    ↓ decrypt  
+  group_key (memory only)
+    ↓ decrypt
+  encrypted_token (Vault)
+    ↓ decrypt
+  token (memory only)
+    ↓ decrypt
+  message (DB)
+    ↓ decrypt
+  plaintext (memory only)
+  
+  Server sees: member_key, encrypted_token, message
+  Server CANNOT decrypt any layer
+end note
+
+note left of vault_token_versions
+  Vault Storage Properties:
+  
+  ✅ Stores client-encrypted blobs
+  ✅ Provides versioning
+  ✅ Encrypts at rest (own keys)
+  ❌ CANNOT decrypt token content
+  ❌ NO transit decryption
+  
+  Path structure:
+  /conversations/{uuid}/versions/{v_x.y.z}
+end note
+
+note bottom of memory_cache
+  Critical Security Property:
+  
+  ALL plaintext sensitive data
+  exists ONLY in memory:
+  
+  - Decrypted tokens
+  - Decrypted messages
+  - Group keys
+  - Identity secret (in use)
+  
+  Cleared on:
+  - Logout
+  - Browser close
+  - Conversation exit
+  
+  NEVER persisted to disk
+end note
+
+note top of device_storage
+  Client-Side Storage:
+  
+  Permanent:
+  - identity_secret (device lifetime)
+  
+  Temporary:
+  - temp_key_pairs (single-use)
+    Discarded after group key exchange
+  
+  All stored securely:
+  - Encrypted at rest
+  - OS-level protections
+end note
+
+@enduml

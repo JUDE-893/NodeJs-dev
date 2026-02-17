@@ -1,0 +1,105 @@
+@startuml 03_Auth_No_Device_Available
+
+title 03. User Authenticate - No Other Device Available
+
+actor User
+participant "Client App" as Client
+participant "Device Storage" as Storage
+participant "Server API" as Server
+participant "Database" as DB
+participant "Email Service" as Email
+
+User -> Client: Login (email, password)
+activate Client
+
+Client -> Server: POST /auth/login\n{email, password}
+activate Server
+Server --> Client: 200 OK\n{session_token}
+deactivate Server
+
+Client -> Storage: Check for identity_secret
+activate Storage
+Storage --> Client: NOT FOUND
+deactivate Storage
+
+Client --> User: "No identity secret found"
+deactivate Client
+
+User -> Client: "No other device available"
+activate Client
+
+Client -> Server: POST /auth/identity-reset/request
+activate Server
+
+Server -> Server: Generate verification token\n(short-lived, single-use)
+
+Server -> Email: Send verification email\n{verification_link}
+activate Email
+Email --> User: Email with verification link
+deactivate Email
+
+Server --> Client: "Verification email sent"
+deactivate Server
+
+Client --> User: "Check your email"
+deactivate Client
+
+User -> User: Open email\nClick verification link
+
+User -> Server: GET /auth/identity-reset/verify\n?token={verification_token}
+activate Server
+
+Server -> Server: Verify token:\n- Valid?\n- Not expired?\n- Not already used?
+
+alt Token valid
+    Server -> DB: Get user's conversations
+    activate DB
+    DB --> Server: List of conversation IDs
+    deactivate DB
+    
+    loop For each conversation
+        Server -> DB: UPDATE conversations\nSET member_key = NULL\nWHERE user_id = {user_id}
+        activate DB
+        DB --> Server: Updated
+        deactivate DB
+    end
+    
+    Server -> DB: Mark token as used
+    activate DB
+    DB --> Server: Done
+    deactivate DB
+    
+    Server --> Client: 200 OK\n"Reset successful"
+    
+else Token invalid
+    Server --> Client: 401 Unauthorized\n"Invalid or expired token"
+end
+
+deactivate Server
+
+activate Client
+Client -> Client: Generate NEW identity_secret
+note right of Client
+  Fresh identity secret generated
+  User will need to get group keys
+  from other members for all
+  conversations
+end note
+
+Client -> Storage: Store new identity_secret
+activate Storage
+Storage --> Client: Stored
+deactivate Storage
+
+Client --> User: "New identity created\nYou'll need group keys from members"
+deactivate Client
+
+note over User, DB
+  Result:
+  ✅ User has new identity_secret
+  ✅ All member_keys set to NULL
+  ⚠️ User locked out of conversations
+  ⚠️ Needs group keys from online members
+end note
+
+@enduml

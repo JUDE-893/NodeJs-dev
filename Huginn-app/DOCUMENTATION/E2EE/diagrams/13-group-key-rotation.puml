@@ -1,0 +1,230 @@
+@startuml 13_Group_Key_Rotation
+
+title 13. When Conversation Member Keys Are Rotated
+
+actor "Admin" as Admin
+participant "Admin Client" as AdminClient
+participant "Crypto Layer" as AdminCrypto
+participant "localStorage" as AdminStorage
+participant "Server API" as Server
+participant "Database" as DB
+participant "Vault KV" as Vault
+participant "WebSocket" as WS
+participant "Member Client" as MemberClient
+participant "Member Crypto" as MemberCrypto
+
+Admin -> AdminClient: Trigger rotation\n(explicit or implicit)
+activate AdminClient
+
+alt Implicit rotation
+    AdminClient --> Admin: "Rotation required - confirm?"
+    Admin -> AdminClient: Confirm
+end
+
+AdminClient -> AdminCrypto: Generate new group_key
+activate AdminCrypto
+note right of AdminCrypto
+  new_group_key = random(32 bytes)
+  CSPRNG
+end note
+AdminCrypto --> AdminClient: new_group_key
+deactivate AdminCrypto
+
+AdminClient -> AdminCrypto: Generate new member_key
+activate AdminCrypto
+note right of AdminCrypto
+  new_member_key = Encrypt(
+    new_group_key,
+    identity_secret
+  )
+end note
+AdminCrypto --> AdminClient: new_member_key
+deactivate AdminCrypto
+
+AdminClient -> Server: GET /conversations/{conv_id}/all-tokens
+activate Server
+note right of Server
+  Fetch ALL token versions
+  for re-encryption
+end note
+
+Server -> Vault: List all versions for conversation
+activate Vault
+Vault --> Server: List of version names
+deactivate Vault
+
+loop For each token version
+    Server -> Vault: GET version
+    activate Vault
+    Vault --> Server: encrypted_token (with old group_key)
+    deactivate Vault
+end
+
+Server --> AdminClient: All encrypted tokens
+deactivate Server
+
+AdminClient -> AdminStorage: Get old member_key
+activate AdminStorage
+AdminStorage --> AdminClient: old_member_key
+deactivate AdminStorage
+
+AdminClient -> AdminCrypto: Decrypt old member_key
+activate AdminCrypto
+AdminCrypto --> AdminClient: old_group_key
+deactivate AdminCrypto
+
+loop For each encrypted token
+
+    AdminClient -> AdminCrypto: Decrypt with old_group_key
+    activate AdminCrypto
+    note right of AdminCrypto
+      token = Decrypt(
+        encrypted_token,
+        old_group_key
+      )
+    end note
+    AdminCrypto --> AdminClient: token (plaintext)
+    deactivate AdminCrypto
+    
+    AdminClient -> AdminCrypto: Re-encrypt with new_group_key
+    activate AdminCrypto
+    note right of AdminCrypto
+      new_encrypted_token = Encrypt(
+        token,
+        new_group_key
+      )
+    end note
+    AdminCrypto --> AdminClient: new_encrypted_token
+    deactivate AdminCrypto
+    
+end
+
+AdminClient -> AdminClient: Derive new group_key_version\n("v2" or incremented)
+
+AdminClient -> Server: POST /conversations/{conv_id}/rotate-group-key\n{new_member_key, group_key_version, re_encrypted_tokens[]}
+activate Server
+
+Server -> Server: Verify:\n- Requester is admin\n- Permissions valid
+
+Server -> Vault: Batch update all token versions
+activate Vault
+
+loop For each re-encrypted token
+    Vault -> Vault: PUT /conversations/{conv_id}/versions/{version}\n{new_encrypted_token}
+    note right of Vault
+      Overwrite with new encryption
+      Old tokens encrypted with old_group_key
+      New tokens encrypted with new_group_key
+    end note
+end
+
+Vault --> Server: All updated
+deactivate Vault
+
+Server -> DB: UPDATE conversation\nSET group_key_version = {new_version}\nSET all member_keys = NULL\n(except admin)
+activate DB
+note right of DB
+  Set all member_keys to NULL
+  except the admin who initiated
+  rotation
+end note
+DB --> Server: Updated
+deactivate DB
+
+Server -> WS: Notify all members\n"Cache invalidation - group key rotated"
+activate WS
+WS -> MemberClient: Rotation notification
+deactivate WS
+
+Server --> AdminClient: "Rotation successful"
+deactivate Server
+
+AdminClient -> AdminStorage: Clear old data
+activate AdminStorage
+note right of AdminStorage
+  Delete:
+  - Old member_key
+  - Old cached tokens
+end note
+AdminStorage --> AdminClient: Cleared
+deactivate AdminStorage
+
+AdminClient -> AdminStorage: Store new member_key
+activate AdminStorage
+AdminStorage --> AdminClient: Stored
+deactivate AdminStorage
+
+AdminClient --> Admin: "Rotation complete"
+deactivate AdminClient
+
+' Other members respond to notification
+activate MemberClient
+
+MemberClient -> MemberClient: Receive rotation notification
+
+MemberClient -> MemberClient: Invalidate cache
+
+MemberClient -> Server: GET /conversations/{conv_id}
+activate Server
+
+Server -> DB: Get conversation
+activate DB
+DB --> Server: {member_key: NULL,\ngroup_key_version: "v2", ...}
+deactivate DB
+
+Server --> MemberClient: Conversation data
+deactivate Server
+
+MemberClient -> MemberClient: Detect member_key == NULL
+
+MemberClient -> MemberClient: REQUEST GROUP KEY\nfrom online member
+note right of MemberClient
+  Use asymmetric encryption
+  (Flow 04 - Request Group Key)
+  Get new_group_key from admin
+  or other member who has it
+end note
+
+MemberClient -> MemberClient: Receive new_group_key
+
+MemberClient -> MemberCrypto: Generate new member_key
+activate MemberCrypto
+note right of MemberCrypto
+  new_member_key = Encrypt(
+    new_group_key,
+    identity_secret
+  )
+end note
+MemberCrypto --> MemberClient: new_member_key
+deactivate MemberCrypto
+
+MemberClient -> Server: POST /conversations/{conv_id}/update-member-key\n{new_member_key}
+activate Server
+
+Server -> DB: UPDATE member_key\n(only if NULL)
+activate DB
+DB --> Server: Updated
+deactivate DB
+
+Server --> MemberClient: "Updated successfully"
+deactivate Server
+
+MemberClient --> MemberClient: "Access restored"
+deactivate MemberClient
+
+note over Admin, MemberClient
+  Rotation complete:
+  ✅ New group_key generated
+  ✅ All tokens re-encrypted with new group_key
+  ✅ All members get new group_key
+  ⚠️ Temporary lockout during transition
+  ⚠️ High overhead (decrypt + re-encrypt all tokens)
+  ⚠️ Admin temporarily has all tokens in plaintext
+  
+  Security impact:
+  - Old group_key compromised → still secure
+  - All historical messages now protected by new key
+  - Members must be online or wait for helper
+end note
+
+@enduml

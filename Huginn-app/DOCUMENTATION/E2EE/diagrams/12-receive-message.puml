@@ -1,0 +1,110 @@
+@startuml 12_Receive_Message
+
+title 12. When Message Is Received
+
+participant "Sender Client" as Sender
+participant "WebSocket" as WS
+participant "Recipient Client" as Client
+participant "Memory Cache" as Memory
+participant "Crypto Layer" as Crypto
+participant "UI Component" as UI
+actor "Recipient User" as User
+
+Sender -> WS: Message sent\n(via flow 11)
+activate WS
+
+WS -> Client: New message event\n{message_id, encrypted_content, token_version: "v_1.3.5"}
+activate Client
+deactivate WS
+
+Client -> Memory: Get token "v_1.3.5"
+activate Memory
+
+alt Token in memory
+    Memory --> Client: token (plaintext)
+    deactivate Memory
+    note right of Client
+      Latest token typically
+      already in memory
+    end note
+    
+    Client -> Crypto: Decrypt message
+    activate Crypto
+    note right of Crypto
+      plaintext = Decrypt(
+        encrypted_content,
+        token
+      )
+    end note
+    Crypto --> Client: plaintext message
+    deactivate Crypto
+    
+    Client -> Memory: Cache decrypted message
+    activate Memory
+    note right of Memory
+      Store in memory for display
+      NOT in persistent storage
+      
+      Cleared on:
+      - Logout
+      - Browser close
+      - Conversation exit
+    end note
+    Memory --> Client: Cached
+    deactivate Memory
+    
+    Client -> UI: Update message list
+    activate UI
+    UI --> User: Display new message
+    deactivate UI
+    
+else Token NOT in memory
+    Memory --> Client: NOT FOUND
+    deactivate Memory
+    
+    note right of Client
+      Rare case: message arrived
+      before token was loaded
+    end note
+    
+    Client -> Client: Fetch token "v_1.3.5"
+    note right of Client
+      Follow "Fetch Conversation Data"
+      flow (Diagram 08)
+      - Check localStorage
+      - Fetch from server if needed
+    end note
+    
+    Client -> Client: Token retrieved
+    
+    Client -> Crypto: Decrypt message
+    activate Crypto
+    Crypto --> Client: plaintext message
+    deactivate Crypto
+    
+    Client -> Memory: Cache decrypted message
+    activate Memory
+    Memory --> Client: Cached
+    deactivate Memory
+    
+    Client -> UI: Update message list
+    activate UI
+    UI --> User: Display new message
+    deactivate UI
+end
+
+deactivate Client
+
+note over Sender, User
+  Real-time flow:
+  1. Sender encrypts with token
+  2. Server relays encrypted content
+  3. Recipient decrypts with same token
+  4. Display immediately if token cached
+  5. Brief delay if token needs fetching
+  
+  ✅ E2EE maintained throughout
+  ✅ Server never sees plaintext
+end note
+
+@enduml

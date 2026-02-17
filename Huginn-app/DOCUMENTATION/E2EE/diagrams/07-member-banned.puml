@@ -1,0 +1,136 @@
+@startuml 07_Member_Banned
+
+title 07. When Member Is Banned By Admin (Immediate Token Creation)
+
+actor "Admin" as Admin
+participant "Admin Client" as AdminClient
+participant "Crypto Layer" as Crypto
+participant "Server API" as Server
+participant "Database" as DB
+participant "Vault KV" as Vault
+participant "WebSocket" as WS
+participant "Other Members" as Members
+
+Admin -> AdminClient: Ban member
+activate AdminClient
+
+AdminClient -> Server: POST /conversations/{conv_id}/ban-member\n{banned_user_id}
+activate Server
+
+Server -> Server: Verify admin permissions
+
+Server -> DB: Remove member\nUPDATE members\nSET leave_date = NOW()\nSET banned = true
+activate DB
+DB --> Server: Member banned
+deactivate DB
+
+Server --> AdminClient: "Member banned successfully"
+deactivate Server
+
+note right of AdminClient
+  No queued rotation
+  Admin creates token immediately
+end note
+
+AdminClient -> Crypto: Generate new token
+activate Crypto
+Crypto --> AdminClient: token (plaintext)
+deactivate Crypto
+
+AdminClient -> Crypto: Encrypt token with group_key
+activate Crypto
+note right of Crypto
+  encrypted_token = Encrypt(
+    token,
+    group_key
+  )
+end note
+Crypto --> AdminClient: encrypted_token
+deactivate Crypto
+
+AdminClient -> Server: POST /conversations/{conv_id}/submit-token\n{encrypted_token, action: "ban"}
+activate Server
+
+Server -> Server: Verify:\n- Requester is admin\n- Recent ban action exists
+
+Server -> Server: Derive new version name\n("v_1.3.4" -> "v_1.3.5")
+
+Server -> Vault: PUT /conversations/{conv_id}/versions/{new_version}\n{encrypted_token, create_date, created_by}
+activate Vault
+
+Vault -> Vault: Store encrypted token
+note right of Vault
+  Cannot decrypt
+  (encrypted with group_key)
+end note
+
+Vault --> Server: 201 Created
+deactivate Vault
+
+Server -> DB: UPDATE conversation\nSET latest_token_version = {new_version}
+activate DB
+DB --> Server: Updated
+deactivate DB
+
+Server -> WS: Notify all online members\n{conv_id, action: "invalidate_cache"}
+activate WS
+
+WS -> Members: Cache invalidation notification
+note right of Members
+  Other members will re-fetch
+  conversation data and get
+  new token version
+end note
+
+deactivate WS
+
+Server --> AdminClient: "Token created and updated"
+deactivate Server
+
+AdminClient --> Admin: "Member banned,\nconversation secured"
+deactivate AdminClient
+
+activate Members
+
+Members -> Members: Receive cache invalidation
+
+Members -> Members: Clear local conversation cache
+
+Members -> Server: GET /conversations/{conv_id}
+activate Server
+
+Server -> DB: Get conversation
+activate DB
+DB --> Server: {latest_token_version: "v_1.3.5", ...}
+deactivate DB
+
+Server --> Members: Updated conversation data
+deactivate Server
+
+Members -> Server: GET /token-versions/v_1.3.5
+activate Server
+
+Server -> Vault: GET /conversations/{conv_id}/versions/v_1.3.5
+activate Vault
+Vault --> Server: {encrypted_token, ...}
+deactivate Vault
+
+Server --> Members: encrypted_token
+deactivate Server
+
+Members -> Members: Decrypt token with group_key
+
+Members --> Members: Can now decrypt\nfuture messages
+deactivate Members
+
+note over Admin, Members
+  Result:
+  ✅ Banned member removed immediately
+  ✅ New token created without delay
+  ✅ No scheduled queue (urgent action)
+  ✅ Banned member cannot decrypt future messages
+  ✅ Other members get new token automatically
+  ⚡ Immediate security (no 5-minute wait)
+end note
+
+@enduml

@@ -1,0 +1,183 @@
+@startuml 04_Request_Group_Key
+
+title 04. Fetch Conversation Data - After Generating New Identity Key
+
+actor "User\n(Requester)" as User
+participant "Requester\nClient" as Client
+participant "Crypto Layer" as Crypto
+participant "Device Storage" as Storage
+participant "Server API" as Server
+participant "WebSocket" as WS
+participant "Helper\nClient" as Helper
+participant "Helper\nCrypto" as HelperCrypto
+
+User -> Client: Fetch conversation
+activate Client
+
+Client -> Server: GET /conversations/{conv_id}
+activate Server
+Server --> Client: Conversation data\n{member_key: NULL, ...}
+deactivate Server
+
+Client -> Client: Check member_key == NULL
+
+Client --> User: "Group key required"
+deactivate Client
+
+User -> Client: Request group key
+activate Client
+
+Client -> Crypto: Generate temp key pair
+activate Crypto
+note right of Crypto
+  Generate ephemeral key pair
+  (X25519 or similar)
+  - publicKey: shareable
+  - privateKey: kept secret
+end note
+
+Crypto -> Crypto: tempKeyPair = generateKeyPair()
+Crypto --> Client: {publicKey, privateKey}
+deactivate Crypto
+
+Client -> Storage: Store {privateKey, group_key_version}
+activate Storage
+note right of Storage
+  Associate privateKey with
+  specific group_key_version
+  for later decryption
+end note
+Storage --> Client: Stored
+deactivate Storage
+
+Client -> Server: POST /conversations/{conv_id}/request-group-key\n{publicKey, group_key_version}
+activate Server
+
+Server -> Server: Verify requester is member
+
+Server -> Server: Find online helper\n(prefer admin)
+
+Server -> WS: Notify helper\n{requester_id, publicKey, group_key_version}
+activate WS
+WS -> Helper: Group key request notification
+deactivate WS
+
+Server --> Client: "Request sent, waiting for helper"
+deactivate Server
+
+activate Helper
+
+Helper -> Helper: Check if has group_key_version
+
+alt Has group key version
+
+    Helper -> HelperCrypto: Decrypt own member_key
+    activate HelperCrypto
+    note right of HelperCrypto
+      member_key decryption:
+      group_key = Decrypt(
+        member_key,
+        helper_identity_secret
+      )
+    end note
+    HelperCrypto --> Helper: group_key (plaintext)
+    deactivate HelperCrypto
+    
+    Helper -> HelperCrypto: Encrypt for requester
+    activate HelperCrypto
+    note right of HelperCrypto
+      Asymmetric encryption:
+      encrypted_group_key = Encrypt_Asymmetric(
+        group_key,
+        requester_publicKey
+      )
+      
+      Uses ECIES/NaCl Box
+      Server CANNOT decrypt
+    end note
+    HelperCrypto -> HelperCrypto: Sign encrypted payload
+    HelperCrypto --> Helper: {encrypted_group_key, signature}
+    deactivate HelperCrypto
+    
+    Helper -> Server: POST /conversations/{conv_id}/provide-group-key\n{requester_id, encrypted_group_key, signature}
+    activate Server
+    
+    Server -> Server: Verify:\n- Helper is member\n- Signature valid
+    
+    Server -> WS: Forward to requester
+    activate WS
+    WS -> Client: {encrypted_group_key}
+    deactivate WS
+    
+    Server --> Helper: "Sent successfully"
+    deactivate Server
+
+else Does not have group key version
+    Helper --> User: "Cannot help - don't have this version"
+    note right of Helper
+      If no helper has the version,
+      user remains locked out until
+      someone with that version comes online
+    end note
+end
+
+deactivate Helper
+
+Client -> Storage: Retrieve privateKey
+activate Storage
+Storage --> Client: privateKey
+deactivate Storage
+
+Client -> Crypto: Decrypt group key
+activate Crypto
+note right of Crypto
+  Asymmetric decryption:
+  group_key = Decrypt_Asymmetric(
+    encrypted_group_key,
+    privateKey
+  )
+  
+  Only requester can decrypt
+end note
+Crypto --> Client: group_key (plaintext)
+deactivate Crypto
+
+Client -> Crypto: Encrypt member_key
+activate Crypto
+note right of Crypto
+  member_key = Encrypt(
+    group_key,
+    identity_secret
+  )
+end note
+Crypto --> Client: member_key
+deactivate Crypto
+
+Client -> Server: POST /conversations/{conv_id}/update-member-key\n{member_key}
+activate Server
+
+Server -> Server: Integrity checks:\n- member_key was NULL?\n- Requester is member?
+
+Server -> Server: UPDATE member_key\n(only if was NULL)
+
+Server --> Client: "Member key updated"
+deactivate Server
+
+Client -> Storage: Discard privateKey\n(single-use)
+activate Storage
+Storage --> Client: Deleted
+deactivate Storage
+
+Client --> User: "Access restored"
+deactivate Client
+
+note over User, HelperCrypto
+  Security properties:
+  ✅ Server never sees group_key plaintext
+  ✅ Asymmetric encryption prevents server decryption
+  ✅ Temporary key pair discarded after use
+  ✅ Only requester can decrypt with privateKey
+  ⚠️ User locked out if no helper online
+end note
+
+@enduml

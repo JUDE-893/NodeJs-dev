@@ -1,0 +1,127 @@
+@startuml 05_User_Joins_Conversation
+
+title 05. When User Joins Conversation
+
+actor "New Member" as User
+participant "New Member\nClient" as Client
+participant "Crypto Layer" as Crypto
+participant "localStorage" as Storage
+participant "Server API" as Server
+participant "Database" as DB
+participant "Vault KV" as Vault
+participant "Helper Client\n(Existing Member)" as Helper
+
+User -> Server: Request to join conversation\n(via invite link or search)
+activate Server
+
+Server -> DB: Add member\n{user_id, member_key: NULL, join_date: NOW()}
+activate DB
+DB --> Server: Member added
+deactivate DB
+
+Server --> User: "Added to conversation"
+deactivate Server
+
+User -> Client: Fetch conversation
+activate Client
+
+Client -> Server: GET /conversations/{conv_id}
+activate Server
+Server -> DB: Get conversation
+activate DB
+DB --> Server: {member_key: NULL, ...}
+deactivate DB
+Server --> Client: Conversation data
+deactivate Server
+
+Client -> Client: Detect member_key == NULL
+
+' Now follow same process as requesting group key
+Client -> Client: REQUEST GROUP KEY PROCESS\n[Same as Flow 04]
+note right of Client
+  Identical to "Request Group Key"
+  flow using asymmetric encryption
+  See diagram 04 for details
+end note
+
+' ... asymmetric key exchange happens here ...
+Client <-> Helper: Asymmetric group key exchange
+Client -> Client: Now has group_key (plaintext)
+
+' Generate new token version
+Client -> Crypto: Generate new token
+activate Crypto
+note right of Crypto
+  token = random(32 bytes)
+  New epoch for conversation
+  after member join
+end note
+Crypto --> Client: token (plaintext)
+deactivate Crypto
+
+Client -> Crypto: Encrypt token with group_key
+activate Crypto
+note right of Crypto
+  encrypted_token = Encrypt(
+    token,
+    group_key
+  )
+  AES-256-GCM
+end note
+Crypto --> Client: encrypted_token
+deactivate Crypto
+
+Client -> Crypto: Generate member_key
+activate Crypto
+note right of Crypto
+  member_key = Encrypt(
+    group_key,
+    identity_secret
+  )
+end note
+Crypto --> Client: member_key
+deactivate Crypto
+
+Client -> Client: Derive new version name\nfrom previous version\n("v_1.3.4" -> "v_1.3.5")
+
+Client -> Server: POST /conversations/{conv_id}/join-complete\n{member_key, new_token_version, encrypted_token}
+activate Server
+
+Server -> Server: Integrity checks:\n- member_key was NULL?\n- User is member?\n- Token version unique?
+
+Server -> Vault: PUT /conversations/{conv_id}/versions/{version}\n{encrypted_token, create_date, created_by}
+activate Vault
+note right of Vault
+  Vault stores encrypted_token
+  Cannot decrypt (encrypted with group_key)
+end note
+Vault --> Server: Stored
+deactivate Vault
+
+Server -> DB: UPDATE conversation\nSET member_key = {member_key}\nSET latest_token_version = {version}
+activate DB
+DB --> Server: Updated
+deactivate DB
+
+Server --> Client: "Join complete"
+deactivate Server
+
+Client -> Storage: Store encrypted_token
+activate Storage
+Storage --> Client: Stored
+deactivate Storage
+
+Client --> User: "You can now read and send messages"
+deactivate Client
+
+note over User, Vault
+  Result:
+  ✅ New member has group_key
+  ✅ New token version created (new epoch)
+  ✅ member_key stored (encrypted group_key)
+  ✅ Can now read/send messages
+  ⚠️ Cannot read messages before join_date
+      (authorization prevents access)
+end note
+
+@enduml

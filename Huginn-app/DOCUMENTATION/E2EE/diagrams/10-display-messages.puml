@@ -1,0 +1,153 @@
+@startuml 10_Display_Messages
+
+title 10. When Member Enters Conversation - Displaying Messages
+
+actor User
+participant "Client App" as Client
+participant "UI Component" as UI
+participant "Memory Cache" as Memory
+participant "localStorage" as Storage
+participant "Crypto Layer" as Crypto
+participant "Server API" as Server
+
+User -> Client: Scroll to view messages
+activate Client
+
+Client -> UI: Render message list
+activate UI
+
+loop For each message
+
+    UI -> UI: Get message.token_version\n(e.g., "v_1.3.2")
+    
+    ' Check memory first
+    UI -> Memory: Get token "v_1.3.2"
+    activate Memory
+    
+    alt Token in memory
+        Memory --> UI: token (plaintext)
+        deactivate Memory
+        
+        UI -> Crypto: Decrypt message
+        activate Crypto
+        note right of Crypto
+          plaintext = Decrypt(
+            message.encrypted_content,
+            token
+          )
+        end note
+        Crypto --> UI: plaintext message
+        deactivate Crypto
+        
+        UI -> UI: Render message
+        
+    else Token NOT in memory
+        Memory --> UI: NOT FOUND
+        deactivate Memory
+        
+        ' Check localStorage
+        UI -> Storage: Get encrypted token "v_1.3.2"
+        activate Storage
+        
+        alt Token in localStorage
+            Storage --> UI: encrypted_token
+            deactivate Storage
+            
+            UI -> Crypto: Decrypt token with group_key
+            activate Crypto
+            note right of Crypto
+              group_key is already in memory
+              from entering conversation
+            end note
+            Crypto --> UI: token (plaintext)
+            deactivate Crypto
+            
+            UI -> Memory: Store token in memory
+            activate Memory
+            Memory --> UI: Cached
+            deactivate Memory
+            
+            UI -> Crypto: Decrypt message
+            activate Crypto
+            Crypto --> UI: plaintext message
+            deactivate Crypto
+            
+            UI -> UI: Render message
+            
+        else Token NOT in localStorage
+            Storage --> UI: NOT FOUND
+            deactivate Storage
+            
+            ' Show loading spinner
+            UI -> UI: Show loading spinner
+            note right of UI
+              User sees spinner while
+              token is being fetched
+            end note
+            
+            ' Fetch from server
+            UI -> Server: GET /token-versions/v_1.3.2
+            activate Server
+            
+            Server -> Server: Authorization check:\n- user.join_date <= token.create_date?
+            
+            alt Authorized
+                Server --> UI: encrypted_token
+                deactivate Server
+                
+                UI -> Storage: Store encrypted_token
+                activate Storage
+                Storage --> UI: Stored
+                deactivate Storage
+                
+                UI -> Crypto: Decrypt token with group_key
+                activate Crypto
+                Crypto --> UI: token (plaintext)
+                deactivate Crypto
+                
+                UI -> Memory: Store token in memory
+                activate Memory
+                Memory --> UI: Cached
+                deactivate Memory
+                
+                UI -> Crypto: Decrypt message
+                activate Crypto
+                Crypto --> UI: plaintext message
+                deactivate Crypto
+                
+                UI -> UI: Hide spinner,\nRender message
+                
+            else Not authorized
+                note right of Server
+                  User joined after this
+                  token version was created
+                  Cannot access
+                end note
+                Server --> UI: 403 Forbidden
+                deactivate Server
+                
+                UI -> UI: Show "Message unavailable"
+            end
+        end
+    end
+end
+
+deactivate UI
+
+Client --> User: Messages displayed
+deactivate Client
+
+note over User, Server
+  Token fetch priority:
+  1️⃣ Memory (fastest)
+  2️⃣ localStorage (fast)
+  3️⃣ Server (slowest, requires network)
+  
+  UX considerations:
+  - Most recent messages use latest token (cached)
+  - Scrolling to old messages may trigger fetches
+  - Spinners prevent UI blocking
+  - Progressive loading
+end note
+
+@enduml

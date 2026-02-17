@@ -1,0 +1,107 @@
+@startuml 09_Enter_Conversation
+
+title 09. When Member Enters Conversation
+
+actor User
+participant "Client App" as Client
+participant "localStorage" as Storage
+participant "Memory Cache" as Memory
+participant "Crypto Layer" as Crypto
+participant "Server API" as Server
+
+User -> Client: Click on conversation
+activate Client
+
+Client -> Server: GET /conversations/{conv_id}
+activate Server
+Server --> Client: {latest_token_version: "v_1.3.5",\nmember_key: "...", ...}
+deactivate Server
+
+' Check localStorage for token
+Client -> Storage: Check for "v_1.3.5"
+activate Storage
+
+alt Token in localStorage
+    Storage --> Client: encrypted_token
+    deactivate Storage
+    note right of Client
+      Token cached locally
+      Skip server fetch
+    end note
+    
+else Token NOT in localStorage
+    Storage --> Client: NOT FOUND
+    deactivate Storage
+    
+    Client -> Client: Fetch token from server
+    note right of Client
+      See "Fetch Conversation Data"
+      flow (Diagram 08) for details
+    end note
+    
+    Client -> Server: GET /token-versions/v_1.3.5
+    activate Server
+    Server --> Client: encrypted_token
+    deactivate Server
+    
+    Client -> Storage: Store encrypted_token
+    activate Storage
+    Storage --> Client: Stored
+    deactivate Storage
+end
+
+' Decrypt member_key to get group_key
+Client -> Crypto: Decrypt member_key
+activate Crypto
+note right of Crypto
+  group_key = Decrypt(
+    member_key,
+    identity_secret
+  )
+  
+  identity_secret never transmitted
+  stays on device
+end note
+Crypto --> Client: group_key (plaintext)
+deactivate Crypto
+
+' Decrypt token with group_key
+Client -> Crypto: Decrypt token
+activate Crypto
+note right of Crypto
+  token = Decrypt(
+    encrypted_token,
+    group_key
+  )
+end note
+Crypto --> Client: token (plaintext)
+deactivate Crypto
+
+' Store decrypted token in memory
+Client -> Memory: Store token in memory
+activate Memory
+note right of Memory
+  Decrypted token exists
+  ONLY in memory
+  
+  Cleared when:
+  - User leaves conversation
+  - User logs out
+  - Browser/tab closes
+end note
+Memory --> Client: Stored
+deactivate Memory
+
+Client --> User: Conversation ready\n(can read and send messages)
+deactivate Client
+
+note over User, Server
+  At this point:
+  ✅ group_key in memory (from member_key)
+  ✅ token in memory (from encrypted_token)
+  ✅ Can decrypt/encrypt messages
+  ✅ No plaintext keys on disk
+  🧠 All sensitive data in RAM only
+end note
+
+@enduml

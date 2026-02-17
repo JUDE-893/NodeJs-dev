@@ -1,0 +1,59 @@
+@startuml 01_User_Signup
+
+title 01. User Signup - Generate Identity Secret
+
+actor User
+participant "Client App" as Client
+participant "Crypto Layer" as Crypto
+participant "Device Storage" as Storage
+participant "Server API" as Server
+participant "Database" as DB
+
+User -> Client: Register (email, password)
+activate Client
+
+Client -> Server: POST /auth/register\n{email, password}
+activate Server
+
+Server -> DB: Create user account
+activate DB
+DB --> Server: User created
+deactivate DB
+
+Server --> Client: 201 Created\n{user_id, session_token}
+deactivate Server
+
+Client -> Crypto: Generate identity secret
+activate Crypto
+note right of Crypto
+  Generate 256-bit random key
+  using crypto.getRandomValues()
+  (CSPRNG)
+end note
+
+Crypto -> Crypto: Generate identity_secret\n(32 bytes, high entropy)
+Crypto --> Client: identity_secret
+deactivate Crypto
+
+Client -> Storage: Store identity_secret
+activate Storage
+note right of Storage
+  Stored securely on device
+  NEVER transmitted to server
+  NEVER leaves the device
+end note
+Storage --> Client: Stored successfully
+deactivate Storage
+
+Client --> User: Registration complete\n⚠️ "Save recovery method"
+deactivate Client
+
+note over User, DB
+  At this point:
+  ✅ User account created on server
+  ✅ Identity secret generated CLIENT-SIDE
+  ✅ Identity secret stored on device
+  ❌ Server has NO knowledge of identity secret
+end note
+
+@enduml

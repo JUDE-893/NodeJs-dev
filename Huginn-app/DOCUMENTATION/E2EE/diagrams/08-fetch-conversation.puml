@@ -1,0 +1,130 @@
+@startuml 08_Fetch_Conversation_Data
+
+title 08. When Users Fetch Conversation Data
+
+actor User
+participant "Client App" as Client
+participant "localStorage" as Storage
+participant "Memory Cache" as Memory
+participant "Server API" as Server
+participant "Database" as DB
+participant "Vault KV" as Vault
+
+User -> Client: Open conversation
+activate Client
+
+Client -> Server: GET /conversations/{conv_id}
+activate Server
+
+Server -> DB: Get conversation
+activate DB
+DB --> Server: {latest_token_version: "v_1.3.5", ...}
+deactivate DB
+
+Server --> Client: Conversation metadata
+deactivate Server
+
+Client -> Storage: Check for token version "v_1.3.5"
+activate Storage
+
+alt Token in localStorage
+    Storage --> Client: encrypted_token
+    deactivate Storage
+    
+    Client -> Client: Token found locally
+    note right of Client
+      Skip server request
+      Use cached version
+    end note
+    
+else Token NOT in localStorage
+    Storage --> Client: NOT FOUND
+    deactivate Storage
+    
+    Client -> Server: GET /token-versions/v_1.3.5
+    activate Server
+    
+    Server -> DB: Check authorization:\n- Is user a member?\n- user.join_date <= token.create_date?
+    activate DB
+    
+    alt User authorized
+        DB --> Server: Authorized
+        deactivate DB
+        
+        Server -> Vault: GET /conversations/{conv_id}/versions/v_1.3.5
+        activate Vault
+        note right of Vault
+          Vault returns encrypted blob
+          Server CANNOT decrypt
+          (encrypted with group_key)
+        end note
+        Vault --> Server: {encrypted_token, create_date, created_by}
+        deactivate Vault
+        
+        Server --> Client: encrypted_token
+        deactivate Server
+        
+        Client -> Storage: Store encrypted_token
+        activate Storage
+        Storage --> Client: Stored
+        deactivate Storage
+        
+    else User NOT authorized
+        note right of DB
+          Authorization fails if:
+          - Not a member
+          - join_date > token.create_date
+          - leave_date < token.create_date
+        end note
+        DB --> Server: Unauthorized
+        deactivate DB
+        Server --> Client: 403 Forbidden
+        deactivate Server
+        Client --> User: "No access to this version"
+    end
+end
+
+alt Token retrieved successfully
+
+    Client -> Client: Decrypt member_key\nwith identity_secret
+    note right of Client
+      group_key = Decrypt(
+        member_key,
+        identity_secret
+      )
+    end note
+    
+    Client -> Client: Decrypt token\nwith group_key
+    note right of Client
+      token = Decrypt(
+        encrypted_token,
+        group_key
+      )
+    end note
+    
+    Client -> Memory: Store decrypted token
+    activate Memory
+    note right of Memory
+      Decrypted tokens exist
+      ONLY in memory
+      Cleared on logout/close
+    end note
+    Memory --> Client: Stored in RAM
+    deactivate Memory
+    
+    Client --> User: "Conversation ready"
+    
+end
+
+deactivate Client
+
+note over User, Vault
+  Token lifecycle:
+  📦 Vault: encrypted_token (encrypted with group_key)
+  💾 localStorage: encrypted_token (cached)
+  🧠 Memory: token (plaintext, temporary)
+  
+  Server never sees plaintext token
+end note
+
+@enduml

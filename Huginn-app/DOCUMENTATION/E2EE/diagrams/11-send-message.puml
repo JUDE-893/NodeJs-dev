@@ -1,0 +1,88 @@
+@startuml 11_Send_Message
+
+title 11. When Message Is Sent
+
+actor User
+participant "Client App" as Client
+participant "Memory Cache" as Memory
+participant "Crypto Layer" as Crypto
+participant "Server API" as Server
+participant "Database" as DB
+participant "WebSocket" as WS
+participant "Other Members" as Recipients
+
+User -> Client: Type message and send
+activate Client
+
+Client -> Memory: Get latest token
+activate Memory
+note right of Memory
+  Latest token already loaded
+  when conversation was entered
+end note
+Memory --> Client: token (plaintext)
+deactivate Memory
+
+Client -> Crypto: Encrypt message
+activate Crypto
+note right of Crypto
+  encrypted_content = Encrypt(
+    message_plaintext,
+    token
+  )
+  
+  Using AES-256-GCM
+  Includes nonce for uniqueness
+end note
+Crypto --> Client: encrypted_content
+deactivate Crypto
+
+Client -> Server: POST /messages\n{conv_id, encrypted_content, token_version: "v_1.3.5"}
+activate Server
+
+Server -> Server: Validate:\n- User is member\n- Token version exists\n- Not banned
+
+Server -> DB: INSERT message\n{encrypted_content, token_version, sender_id, timestamp}
+activate DB
+note right of DB
+  Server stores encrypted content
+  Cannot decrypt (needs token)
+end note
+DB --> Server: Message ID
+deactivate DB
+
+Server -> WS: Broadcast to conversation members
+activate WS
+note right of WS
+  Real-time delivery
+  to online members
+end note
+WS -> Recipients: New message notification\n{message_id, encrypted_content, token_version}
+deactivate WS
+
+Server --> Client: 201 Created\n{message_id, timestamp}
+deactivate Server
+
+Client -> Memory: Store plaintext in memory cache
+activate Memory
+note right of Memory
+  Cache decrypted message
+  for instant display
+  (memory only, not persistent)
+end note
+Memory --> Client: Cached
+deactivate Memory
+
+Client --> User: Message sent ✓
+deactivate Client
+
+note over User, Recipients
+  E2EE properties:
+  ✅ Message encrypted client-side
+  ✅ Server only sees ciphertext
+  ✅ Only members with token can decrypt
+  ✅ Real-time delivery via WebSocket
+  🔐 Server cannot read message content
+end note
+
+@enduml

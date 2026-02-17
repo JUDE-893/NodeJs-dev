@@ -1,0 +1,81 @@
+@startuml 02_Auth_With_Other_Device
+
+title 02. User Authenticate - With Other Device (QR Code Transfer)
+
+actor User
+participant "New Device\nClient" as NewClient
+participant "New Device\nStorage" as NewStorage
+participant "Old Device\nClient" as OldClient
+participant "Old Device\nStorage" as OldStorage
+participant "Server API" as Server
+
+User -> NewClient: Login (email, password)
+activate NewClient
+
+NewClient -> Server: POST /auth/login\n{email, password}
+activate Server
+Server --> NewClient: 200 OK\n{session_token}
+deactivate Server
+
+NewClient -> NewStorage: Check for identity_secret
+activate NewStorage
+NewStorage --> NewClient: NOT FOUND
+deactivate NewStorage
+
+NewClient --> User: "Identity secret not found\nUse another device?"
+deactivate NewClient
+
+User -> NewClient: "Yes, I have another device"
+activate NewClient
+
+NewClient --> User: Display QR scan prompt
+deactivate NewClient
+
+User -> OldClient: "Transfer identity to new device"
+activate OldClient
+
+OldClient -> OldStorage: Retrieve identity_secret
+activate OldStorage
+OldStorage --> OldClient: identity_secret
+deactivate OldStorage
+
+OldClient -> OldClient: Generate QR code\nPayload: {identity_secret, timestamp}
+note right of OldClient
+  QR code contains:
+  - identity_secret (encrypted)
+  - timestamp
+  - signature
+  
+  Transfer happens OFFLINE
+  via QR scan - no server
+end note
+
+OldClient --> User: Display QR code
+deactivate OldClient
+
+User -> User: Scan QR code with new device
+
+User -> NewClient: QR scanned
+activate NewClient
+
+NewClient -> NewClient: Parse QR payload
+NewClient -> NewClient: Verify timestamp\n(prevent replay)
+NewClient -> NewClient: Verify signature
+
+NewClient -> NewStorage: Store identity_secret
+activate NewStorage
+NewStorage --> NewClient: Stored
+deactivate NewStorage
+
+NewClient --> User: "Identity transferred successfully"
+deactivate NewClient
+
+note over User, Server
+  Transfer complete:
+  ✅ Identity secret moved to new device
+  ✅ Transfer happened offline (QR code)
+  ❌ Server never involved in transfer
+  ✅ Both devices now have same identity_secret
+end note
+
+@enduml
